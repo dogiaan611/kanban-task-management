@@ -65,4 +65,13 @@ public class JwtTokenProvider {
         }
         return false;
     }
+
+    public String generateTokenFromUsername(String username) {
+        return Jwts.builder()
+                .setSubject(username) // Lưu trực tiếp chuỗi email (username) vào token
+                .setIssuedAt(new Date()) // Thời điểm tạo
+                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs)) // Thời điểm hết hạn
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256) // Ký bằng thuật toán HS256
+                .compact();
+    }
 }

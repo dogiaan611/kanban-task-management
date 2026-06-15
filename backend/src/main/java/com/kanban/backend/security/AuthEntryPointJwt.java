@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
-@Component
-@Slf4j
+@Component // Dùng để khai báo đây là phần cốt lỗi của ứng dụng
+@Slf4j // Tự động tạo log
 public class AuthEntryPointJwt implements AuthenticationEntryPoint {
 
     @Override
