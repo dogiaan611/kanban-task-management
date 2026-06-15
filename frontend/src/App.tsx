@@ -1,13 +1,15 @@
-import React from 'react'
+import { Routes, Route } from 'react-router-dom'
+import Login from './pages/Login'
+import Register from './pages/Register'
 
 function App() {
-  return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <h1 className="text-4xl font-bold text-blue-600">
-          Tailwind CSS v4 đã hoạt động!
-        </h1>
-      </div>
-  )
+    return (
+        <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/" element={<div className="p-10 text-xl text-center">Dashboard</div>} />
+        </Routes>
+    )
 }
 
 export default App
