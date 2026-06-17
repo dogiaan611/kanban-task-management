@@ -1,0 +1,80 @@
+package com.kanban.backend.service;
+
+import com.kanban.backend.dto.request.BoardRequest;
+import com.kanban.backend.dto.response.BoardResponse;
+import com.kanban.backend.entity.Board;
+import com.kanban.backend.entity.User;
+import com.kanban.backend.entity.Workspace;
+import com.kanban.backend.repository.BoardRepository;
+import com.kanban.backend.repository.UserRepository;
+import com.kanban.backend.repository.WorkspaceMemberRepository;
+import com.kanban.backend.repository.WorkspaceRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class BoardService {
+
+    private final BoardRepository boardRepository;
+    private final WorkspaceRepository workspaceRepository;
+    private final WorkspaceMemberRepository workspaceMemberRepository;
+    private final UserRepository userRepository;
+
+    // 1. TẠO BOARD MỚI TRONG WORKSPACE
+    @Transactional
+    public BoardResponse createBoard(BoardRequest request, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Workspace workspace = workspaceRepository.findById(request.getWorkspaceId())
+                .orElseThrow(() -> new RuntimeException("Workspace not found"));
+
+        // Kiểm tra xem user hiện tại có phải là thành viên của Workspace này không
+        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(workspace, user);
+        if (!isMember) {
+            throw new RuntimeException("Bạn không có quyền tạo Board trong Workspace này!");
+        }
+
+        Board board = Board.builder()
+                .workspace(workspace)
+                .name(request.getName())
+                .build();
+        board = boardRepository.save(board);
+
+        return new BoardResponse(
+                board.getId(),
+                workspace.getId(),
+                board.getName(),
+                board.getCreatedAt()
+        );
+    }
+
+    // 2. LẤY DANH SÁCH BOARD CỦA 1 WORKSPACE
+    public List<BoardResponse> getBoardsByWorkspace(Long workspaceId, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new RuntimeException("Workspace not found"));
+
+        // Phải là thành viên mới được xem danh sách Board
+        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(workspace, user);
+        if (!isMember) {
+            throw new RuntimeException("Bạn không có quyền xem các Board trong Workspace này!");
+        }
+
+        List<Board> boards = boardRepository.findByWorkspace(workspace);
+
+        return boards.stream().map(board -> new BoardResponse(
+                board.getId(),
+                workspace.getId(),
+                board.getName(),
+                board.getCreatedAt()
+        )).collect(Collectors.toList());
+    }
+}
