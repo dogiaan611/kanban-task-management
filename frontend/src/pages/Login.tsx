@@ -1,28 +1,24 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { LogIn } from 'lucide-react';
 import { apiClient } from '../api/axios';
 import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
     const { register, handleSubmit, formState: { errors } } = useForm();
     const [errorMessage, setErrorMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
 
     const onSubmit = async (data: any) => {
         setIsLoading(true);
         setErrorMessage('');
         try {
-            // Gọi API đăng nhập
             const response = await apiClient.post('/auth/login', data);
-
-            // Lưu token và thông tin user vào localStorage
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('user', JSON.stringify(response.data));
-
-            // Chuyển hướng vào trang Dashboard (Ta sẽ làm sau)
-            navigate('/');
+            navigate('/dashboard');
         } catch (error: any) {
             setErrorMessage(error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại!');
         } finally {
@@ -31,61 +27,74 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-100">
-            <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-                <div className="flex flex-col items-center mb-8">
-                    <div className="bg-blue-600 p-3 rounded-full mb-4 shadow-md">
-                        <LogIn className="w-8 h-8 text-white" />
+        <div className="min-h-screen p-4 md:p-10 flex items-center justify-center font-sans bg-slate-100">
+            {/* Main Card */}
+            <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden relative">
+                <div className="p-10 sm:p-14 flex flex-col justify-center">
+
+                    <div className="max-w-md w-full mx-auto">
+                        <h2 className="text-3xl font-extrabold text-slate-800 mb-2">Welcome to Kanban!</h2>
+                        <div className="text-slate-400 text-sm mb-8 font-medium">Log in to your account</div>
+
+                        {errorMessage && (
+                            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-6 text-center border border-red-200">
+                                {errorMessage}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-4">
+                            {/* Email Field */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Email</label>
+                                <input
+                                    type="email"
+                                    className="w-full px-5 py-3.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-300 font-medium text-slate-700"
+                                    placeholder="your@email.com"
+                                    {...register('email', { required: 'Vui lòng nhập Email' })}
+                                />
+                                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message as string}</p>}
+                            </div>
+
+                            {/* Password Field */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Password</label>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        className="w-full px-5 py-3.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-300 font-medium pr-12 text-slate-700"
+                                        placeholder="8+ characters"
+                                        {...register('password', { required: 'Vui lòng nhập Mật khẩu' })}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                    </button>
+                                </div>
+                                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message as string}</p>}
+                            </div>
+
+                            {/* Login Button */}
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-full transition-colors flex justify-center items-center shadow-lg shadow-emerald-600/30 mt-10"
+                            >
+                                {isLoading ? 'Processing...' : 'Login'}
+                            </button>
+                        </form>
+
+                        {/* Sign up link */}
+                        <div className="mt-8 flex items-center justify-center text-sm">
+                            <span className="text-slate-400 mr-4 font-medium">Don't have an account?</span>
+                            <Link to="/register" className="px-6 py-2 border border-slate-200 rounded-full font-bold text-slate-600 hover:border-emerald-600 hover:text-emerald-600 transition-colors shadow-sm">
+                                SIGN UP
+                            </Link>
+                        </div>
                     </div>
-                    <h2 className="text-2xl font-bold text-slate-800">Đăng nhập Kanban</h2>
-                    <p className="text-slate-500 text-sm mt-1">Quản lý công việc nhóm hiệu quả</p>
                 </div>
-
-                {errorMessage && (
-                    <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-4 text-center border border-red-200">
-                        {errorMessage}
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                        <input
-                            type="email"
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                            placeholder="nhap@email.com"
-                            {...register('email', { required: 'Vui lòng nhập Email' })}
-                        />
-                        {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message as string}</p>}
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Mật khẩu</label>
-                        <input
-                            type="password"
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                            placeholder="••••••••"
-                            {...register('password', { required: 'Vui lòng nhập Mật khẩu' })}
-                        />
-                        {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message as string}</p>}
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors flex justify-center items-center"
-                    >
-                        {isLoading ? 'Đang xử lý...' : 'Đăng nhập'}
-                    </button>
-                </form>
-
-                <p className="text-center text-sm text-slate-600 mt-6">
-                    Chưa có tài khoản?{' '}
-                    <Link to="/register" className="text-blue-600 hover:underline font-medium">
-                        Đăng ký ngay
-                    </Link>
-                </p>
-
             </div>
         </div>
     );

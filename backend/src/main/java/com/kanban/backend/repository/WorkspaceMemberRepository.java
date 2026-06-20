@@ -19,4 +19,10 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
 
     // Lấy chi tiết thông tin tham gia (để xem role là gì)
     Optional<WorkspaceMember> findByWorkspaceAndUser(Workspace workspace, User user);
+
+    // Tìm kiếm workspace theo tên cho user
+    List<WorkspaceMember> findByUserAndWorkspace_NameContainingIgnoreCase(User user, String keyword);
+
+    // Xóa tất cả member của một workspace
+    void deleteByWorkspace(Workspace workspace);
 }

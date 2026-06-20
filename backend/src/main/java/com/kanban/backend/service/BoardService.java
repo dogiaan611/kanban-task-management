@@ -77,4 +77,24 @@ public class BoardService {
                 board.getCreatedAt()
         )).collect(Collectors.toList());
     }
+
+    // 3. XÓA BOARD
+    @Transactional
+    public void deleteBoard(Long boardId, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new RuntimeException("Board not found"));
+
+        // Kiểm tra quyền xóa: Phải là Admin của Workspace
+        com.kanban.backend.entity.WorkspaceMember member = workspaceMemberRepository.findByWorkspaceAndUser(board.getWorkspace(), user)
+                .orElseThrow(() -> new RuntimeException("You are not a member of this workspace"));
+
+        if (!"ROLE_ADMIN".equals(member.getRole())) {
+            throw new RuntimeException("Only ADMIN can delete boards in this workspace");
+        }
+
+        boardRepository.delete(board);
+    }
 }

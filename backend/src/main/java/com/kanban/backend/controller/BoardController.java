@@ -2,6 +2,7 @@ package com.kanban.backend.controller;
 
 import com.kanban.backend.dto.request.BoardRequest;
 import com.kanban.backend.dto.response.BoardResponse;
+import com.kanban.backend.dto.response.MessageResponse;
 import com.kanban.backend.security.CustomUserDetails;
 import com.kanban.backend.service.BoardService;
 import jakarta.validation.Valid;
@@ -39,5 +40,19 @@ public class BoardController {
 
         List<BoardResponse> responses = boardService.getBoardsByWorkspace(workspaceId, userDetails.getUsername());
         return ResponseEntity.ok(responses);
+    }
+
+    // 3. API Xóa Board
+    // DELETE: http://localhost:8080/api/boards/{id}
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteBoard(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            boardService.deleteBoard(id, userDetails.getUsername());
+            return ResponseEntity.ok(new MessageResponse("Xóa Board thành công!"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
     }
 }

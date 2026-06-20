@@ -54,13 +54,17 @@ public class WorkspaceService {
         );
     }
 
-    // 2. LẤY DANH SÁCH WORKSPACE CỦA USER ĐANG ĐĂNG NHẬP
-    public List<WorkspaceResponse> getUserWorkspaces(String userEmail) {
+    // 2. LẤY DANH SÁCH WORKSPACE CỦA USER ĐANG ĐĂNG NHẬP (CÓ HỖ TRỢ TÌM KIẾM)
+    public List<WorkspaceResponse> getUserWorkspaces(String userEmail, String keyword) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Lấy tất cả các dòng dữ liệu thành viên của user này
-        List<WorkspaceMember> memberships = workspaceMemberRepository.findByUser(user);
+        List<WorkspaceMember> memberships;
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            memberships = workspaceMemberRepository.findByUserAndWorkspace_NameContainingIgnoreCase(user, keyword.trim());
+        } else {
+            memberships = workspaceMemberRepository.findByUser(user);
+        }
 
         // Chuyển đổi thành dạng DTO trả về cho Frontend
         return memberships.stream().map(member -> new WorkspaceResponse(
@@ -90,7 +94,10 @@ public class WorkspaceService {
             throw new RuntimeException("Only ADMIN can delete this workspace");
         }
 
-        // Nhờ cơ chế Cascade trong DB, các records trong workspace_members cũng tự động bị xóa theo
+        // Xóa tất cả các members trước để tránh lỗi khóa ngoại (Foreign Key Constraint)
+        workspaceMemberRepository.deleteByWorkspace(workspace);
+
+        // Sau đó mới xóa workspace
         workspaceRepository.delete(workspace);
     }
 }

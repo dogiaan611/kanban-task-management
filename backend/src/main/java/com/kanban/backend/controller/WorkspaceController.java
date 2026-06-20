@@ -20,13 +20,14 @@ public class WorkspaceController {
 
     private final WorkspaceService workspaceService;
 
-    // 1. API Lấy danh sách Workspace của mình
-    // GET: http://localhost:8080/api/workspaces
+    // 1. API Lấy danh sách Workspace của mình (Hỗ trợ tìm kiếm với tham số q)
+    // GET: http://localhost:8080/api/workspaces?q=keyword
     @GetMapping
     public ResponseEntity<List<WorkspaceResponse>> getUserWorkspaces(
+            @RequestParam(required = false) String q,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        List<WorkspaceResponse> workspaces = workspaceService.getUserWorkspaces(userDetails.getUsername());
+        List<WorkspaceResponse> workspaces = workspaceService.getUserWorkspaces(userDetails.getUsername(), q);
         return ResponseEntity.ok(workspaces);
     }
 
