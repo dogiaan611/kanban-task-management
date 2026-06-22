@@ -3,9 +3,11 @@ package com.kanban.backend.service;
 import com.kanban.backend.dto.request.BoardRequest;
 import com.kanban.backend.dto.response.BoardResponse;
 import com.kanban.backend.entity.Board;
+import com.kanban.backend.entity.KanbanList;
 import com.kanban.backend.entity.User;
 import com.kanban.backend.entity.Workspace;
 import com.kanban.backend.repository.BoardRepository;
+import com.kanban.backend.repository.KanbanListRepository;
 import com.kanban.backend.repository.UserRepository;
 import com.kanban.backend.repository.WorkspaceMemberRepository;
 import com.kanban.backend.repository.WorkspaceRepository;
@@ -24,6 +26,7 @@ public class BoardService {
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
+    private final KanbanListRepository kanbanListRepository;
 
     // 1. TẠO BOARD MỚI TRONG WORKSPACE
     @Transactional
@@ -45,6 +48,13 @@ public class BoardService {
                 .name(request.getName())
                 .build();
         board = boardRepository.save(board);
+
+        // Tạo 3 lists mặc định: To Do, In Progress, Done
+        KanbanList todo = KanbanList.builder().board(board).title("To Do").position(65536.0).build();
+        KanbanList inProgress = KanbanList.builder().board(board).title("In Progress").position(131072.0).build();
+        KanbanList done = KanbanList.builder().board(board).title("Done").position(196608.0).build();
+
+        kanbanListRepository.saveAll(List.of(todo, inProgress, done));
 
         return new BoardResponse(
                 board.getId(),

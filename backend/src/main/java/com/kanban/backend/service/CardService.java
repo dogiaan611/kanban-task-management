@@ -1,0 +1,91 @@
+package com.kanban.backend.service;
+
+import com.kanban.backend.dto.request.CardRequest;
+import com.kanban.backend.dto.request.UpdatePositionRequest;
+import com.kanban.backend.dto.response.CardResponse;
+import com.kanban.backend.entity.Board;
+import com.kanban.backend.entity.Card;
+import com.kanban.backend.entity.KanbanList;
+import com.kanban.backend.entity.User;
+import com.kanban.backend.repository.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class CardService {
+
+    private final CardRepository cardRepository;
+    private final KanbanListRepository listRepository;
+    private final WorkspaceMemberRepository workspaceMemberRepository;
+    private final UserRepository userRepository;
+
+    private void checkAccess(Board board, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(board.getWorkspace(), user);
+        if (!isMember) {
+            throw new RuntimeException("You do not have access to this board.");
+        }
+    }
+
+    @Transactional
+    public CardResponse createCard(CardRequest request, String userEmail) {
+        KanbanList list = listRepository.findById(request.getListId())
+                .orElseThrow(() -> new RuntimeException("List not found"));
+
+        checkAccess(list.getBoard(), userEmail);
+
+        Double maxPosition = cardRepository.findTopByListOrderByPositionDesc(list)
+                .map(Card::getPosition)
+                .orElse(0.0);
+
+        Card newCard = Card.builder()
+                .list(list)
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .position(maxPosition + 65536.0)
+                .build();
+
+        newCard = cardRepository.save(newCard);
+
+        return new CardResponse(
+                newCard.getId(),
+                list.getId(),
+                newCard.getTitle(),
+                newCard.getDescription(),
+                newCard.getPosition(),
+                newCard.getCreatedAt()
+        );
+    }
+
+    @Transactional
+    public void updateCardPosition(Long cardId, UpdatePositionRequest request, String userEmail) {
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new RuntimeException("Card not found"));
+        
+        checkAccess(card.getList().getBoard(), userEmail);
+
+        // If card is moved to another list
+        if (request.getParentId() != null && !card.getList().getId().equals(request.getParentId())) {
+            KanbanList newList = listRepository.findById(request.getParentId())
+                    .orElseThrow(() -> new RuntimeException("Destination list not found"));
+            checkAccess(newList.getBoard(), userEmail);
+            card.setList(newList);
+        }
+
+        card.setPosition(request.getPosition());
+        cardRepository.save(card);
+    }
+
+    @Transactional
+    public void deleteCard(Long cardId, String userEmail) {
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new RuntimeException("Card not found"));
+
+        checkAccess(card.getList().getBoard(), userEmail);
+
+        cardRepository.delete(card);
+    }
+}
