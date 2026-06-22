@@ -110,10 +110,10 @@ const WorkspaceDetail = () => {
                     <div className="col-span-full flex flex-col items-center justify-center p-12 bg-white/50 backdrop-blur-sm rounded-3xl border-2 border-dashed border-slate-300">
                         <LayoutTemplate className="w-16 h-16 text-slate-300 mb-4" />
                         <h3 className="text-lg font-bold text-slate-700 mb-2">No Boards Yet</h3>
-                        <p className="text-slate-500 mb-6 text-center">Create your first Kanban board to start collaborating.</p>
+                        <p className="text-slate-500 mb-8 text-center">Create your first Kanban board to start collaborating.</p>
                         <button
                             onClick={() => setIsModalOpen(true)}
-                            className="bg-emerald-50 text-emerald-600 font-medium px-6 py-2.5 rounded-xl hover:bg-emerald-100 transition-colors"
+                            className="mt-2 bg-emerald-50 text-emerald-600 font-medium px-6 py-2.5 rounded-xl hover:bg-emerald-100 transition-colors"
                         >
                             Create Board Now
                         </button>
@@ -121,13 +121,7 @@ const WorkspaceDetail = () => {
                 )}
             </div>
 
-            {/* Back Button Bottom Right */}
-            <div className="fixed bottom-8 right-8 z-40">
-                <Link to="/dashboard" className="flex items-center px-6 py-3 bg-white text-emerald-600 font-bold rounded-2xl hover:bg-emerald-50 transition-all group shadow-lg border border-emerald-100 hover:-translate-y-1 hover:shadow-xl">
-                    <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
-                    Back to Workspaces
-                </Link>
-            </div>
+
 
             {/* Modal tạo Board */}
             {isModalOpen && (

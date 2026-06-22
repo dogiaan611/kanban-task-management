@@ -6,6 +6,7 @@ import DashboardLayout from './layouts/DashboardLayout'
 import WorkspaceList from './pages/WorkspaceList'
 import WorkspaceDetail from './pages/WorkspaceDetail'
 import Home from './pages/Home'
+import BoardDetail from './pages/BoardDetail'
 
 const App = () => {
     return (
@@ -18,6 +19,7 @@ const App = () => {
             <Route element={<DashboardLayout />}>
                 <Route path="/dashboard" element={<WorkspaceList />} />
                 <Route path="/workspace/:id" element={<WorkspaceDetail />} />
+                <Route path="/board/:id" element={<BoardDetail />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

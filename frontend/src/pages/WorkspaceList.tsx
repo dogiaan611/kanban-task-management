@@ -112,10 +112,10 @@ const WorkspaceList = () => {
                     <div className="col-span-full flex flex-col items-center justify-center p-12 bg-white/50 backdrop-blur-sm rounded-3xl border-2 border-dashed border-slate-300">
                         <Briefcase className="w-16 h-16 text-slate-300 mb-4" />
                         <h3 className="text-lg font-bold text-slate-700 mb-2">No Workspaces Yet</h3>
-                        <p className="text-slate-500 mb-6 text-center">Start by creating your first workspace to collaborate.</p>
+                        <p className="text-slate-500 mb-8 text-center">Start by creating your first workspace to collaborate.</p>
                         <button
                             onClick={() => setIsModalOpen(true)}
-                            className="bg-emerald-50 text-emerald-600 font-medium px-6 py-2.5 rounded-xl hover:bg-emerald-100 transition-colors"
+                            className="mt-2 bg-emerald-50 text-emerald-600 font-medium px-6 py-2.5 rounded-xl hover:bg-emerald-100 transition-colors"
                         >
                             Create Workspace
                         </button>
