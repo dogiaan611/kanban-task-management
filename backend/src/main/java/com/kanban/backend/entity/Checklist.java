@@ -8,27 +8,27 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "cards")
+@Table(name = "checklists")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Card {
+public class Checklist {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "list_id", nullable = false)
-    private KanbanList list;
+    @JoinColumn(name = "card_id", nullable = false)
+    private Card card;
 
     @Column(nullable = false)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
+    @Column(name = "is_completed", nullable = false)
+    private Boolean isCompleted;
 
     @Column(nullable = false)
     private Double position;
@@ -40,11 +40,4 @@ public class Card {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assignee_id")
-    private User assignee;
-
-    @Column(name = "due_date")
-    private LocalDateTime dueDate;
 }

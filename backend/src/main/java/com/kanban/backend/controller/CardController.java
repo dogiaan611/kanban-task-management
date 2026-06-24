@@ -40,6 +40,19 @@ public class CardController {
         }
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateCardDetail(
+            @PathVariable Long id,
+            @Valid @RequestBody com.kanban.backend.dto.request.UpdateCardDetailRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            CardResponse response = cardService.updateCardDetail(id, request, userDetails.getUsername());
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteCard(
             @PathVariable Long id,

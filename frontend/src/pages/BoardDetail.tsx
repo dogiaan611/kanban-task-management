@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, type DropResult } from '@hello-pangea/dnd';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, LayoutGrid } from 'lucide-react';
 import KanbanList from '../components/kanban/KanbanList';
+import BoardMembersBar from '../components/kanban/BoardMembersBar';
 import * as kanbanService from '../api/kanbanService';
+import { getBoardById } from '../api/boardService';
 
 const BoardDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -15,10 +17,18 @@ const BoardDetail = () => {
     const [isAddingList, setIsAddingList] = useState(false);
     const [newListTitle, setNewListTitle] = useState('');
 
+    // Lấy tên Board từ API
+    const { data: boardInfo } = useQuery({
+        queryKey: ['board', boardId],
+        queryFn: () => getBoardById(boardId),
+        enabled: !!boardId
+    });
+
     const { data: lists, isLoading } = useQuery({
         queryKey: ['lists', boardId],
         queryFn: () => kanbanService.getListsByBoard(boardId),
-        enabled: !!boardId
+        enabled: !!boardId,
+        meta: { boardId }
     });
 
     const createListMutation = useMutation({
@@ -140,6 +150,30 @@ const BoardDetail = () => {
     return (
         <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-emerald-50/30 overflow-hidden">
 
+            {/* Board Header */}
+            <div className="flex items-center justify-between px-8 py-4 bg-white/80 backdrop-blur-sm border-b border-slate-200/60 shrink-0 relative">
+                <div className="flex items-center space-x-4">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+                        title="Go back"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div className="w-px h-6 bg-slate-200" />
+                    <div className="flex items-center space-x-2">
+                        <div className="p-1.5 bg-emerald-50 rounded-lg">
+                            <LayoutGrid className="w-4 h-4 text-emerald-600" />
+                        </div>
+                        <h1 className="text-lg font-bold text-slate-800">
+                            {boardInfo?.name ?? 'Board'}
+                        </h1>
+                    </div>
+                </div>
+
+                {/* Board Members Bar */}
+                <BoardMembersBar boardId={boardId} />
+            </div>
 
             {/* Kanban Board Area */}
             <div className="flex-1 overflow-x-auto overflow-y-hidden p-8">

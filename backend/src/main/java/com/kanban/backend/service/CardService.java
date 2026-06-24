@@ -56,7 +56,10 @@ public class CardService {
                 newCard.getTitle(),
                 newCard.getDescription(),
                 newCard.getPosition(),
-                newCard.getCreatedAt()
+                newCard.getCreatedAt(),
+                newCard.getDueDate(),
+                newCard.getAssignee() != null ? newCard.getAssignee().getId() : null,
+                newCard.getAssignee() != null ? newCard.getAssignee().getFullName() : null
         );
     }
 
@@ -77,6 +80,40 @@ public class CardService {
 
         card.setPosition(request.getPosition());
         cardRepository.save(card);
+    }
+
+    @Transactional
+    public CardResponse updateCardDetail(Long cardId, com.kanban.backend.dto.request.UpdateCardDetailRequest request, String userEmail) {
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new RuntimeException("Card not found"));
+        
+        checkAccess(card.getList().getBoard(), userEmail);
+
+        if (request.getDescription() != null) {
+            card.setDescription(request.getDescription());
+        }
+        if (request.getDueDate() != null) {
+            card.setDueDate(request.getDueDate());
+        }
+        if (request.getAssigneeId() != null) {
+            User assignee = userRepository.findById(request.getAssigneeId())
+                    .orElseThrow(() -> new RuntimeException("Assignee not found"));
+            // In the future, verify assignee is a board member
+            card.setAssignee(assignee);
+        }
+
+        card = cardRepository.save(card);
+        return new CardResponse(
+                card.getId(),
+                card.getList().getId(),
+                card.getTitle(),
+                card.getDescription(),
+                card.getPosition(),
+                card.getCreatedAt(),
+                card.getDueDate(),
+                card.getAssignee() != null ? card.getAssignee().getId() : null,
+                card.getAssignee() != null ? card.getAssignee().getFullName() : null
+        );
     }
 
     @Transactional

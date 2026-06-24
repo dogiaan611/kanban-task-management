@@ -1,0 +1,91 @@
+### 1. Đăng ký tài khoản mới (Nếu bạn chưa có tài khoản)
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "testuser@gmail.com",
+  "password": "password123",
+  "fullName": "User Kiem Thu"
+}
+
+### 2. Đăng nhập để lấy Access Token (Tự động lưu Token)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "testuser@gmail.com",
+  "password": "password123"
+}
+
+> {%
+    client.global.set("auth_token", response.body.accessToken);
+    client.log("Đã lưu Token: " + client.global.get("auth_token"));
+%}
+
+### 3. Tạo Workspace mới (Nếu chưa có Workspace nào)
+POST http://localhost:8080/api/workspaces
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "name": "Workspace Kiem Thu",
+  "description": "Workspace de test checklist"
+}
+
+### 4. Tạo Board mới trong Workspace
+POST http://localhost:8080/api/boards
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "workspaceId": 1,
+  "name": "Board Kiem Thu"
+}
+
+### 5. Tạo List mới trong Board
+POST http://localhost:8080/api/lists
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "boardId": 1,
+  "title": "Cột việc cần làm"
+}
+
+### 6. Tạo Card mới trong List
+POST http://localhost:8080/api/cards
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "listId": 1,
+  "title": "Học Spring Boot",
+  "description": "Học về các API cơ bản"
+}
+
+### 7. Tạo Checklist Item cho Card (Thay cardId phù hợp nếu ID khác 1)
+POST http://localhost:8080/api/cards/1/checklists
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "title": "Thiết lập môi trường Java"
+}
+
+### 8. Lấy danh sách các Checklist của Card
+GET http://localhost:8080/api/cards/1/checklists
+Authorization: Bearer {{auth_token}}
+
+### 9. Cập nhật Checklist (Đánh dấu hoàn thành - Thay ID checklist phù hợp nếu khác 1)
+PUT http://localhost:8080/api/checklists/1
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "title": "Thiết lập môi trường Java (Đã hoàn thành)",
+  "isCompleted": true
+}
+
+### 10. Xóa Checklist Item
+DELETE http://localhost:8080/api/checklists/1
+Authorization: Bearer {{auth_token}}

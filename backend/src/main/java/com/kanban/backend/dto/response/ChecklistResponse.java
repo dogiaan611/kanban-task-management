@@ -9,14 +9,11 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @AllArgsConstructor
-public class CardResponse {
+public class ChecklistResponse {
     private Long id;
-    private Long listId;
+    private Long cardId;
     private String title;
-    private String description;
+    private Boolean isCompleted;
     private Double position;
     private LocalDateTime createdAt;
-    private LocalDateTime dueDate;
-    private Long assigneeId;
-    private String assigneeName;
 }

@@ -69,20 +69,20 @@
 ## Tuần 4: Chi tiết Card, Phân quyền Board, Tương tác & User Profile
 
 ### 11. Backend - Chi tiết Card, Phân quyền & Tương tác
-- `[ ]` Migration: Tạo bảng board_members và thêm cột is_private cho boards
-- `[ ]` Migration: Tạo bảng checklists, comments, activities
+- `[/]` Migration: Tạo bảng board_members và thêm cột is_private cho boards
+- `[/]` Migration: Tạo bảng checklists, comments, activities
 - `[ ]` Tạo API quản lý Board Members (Add/Remove User khỏi Board)
-- `[ ]` Tạo API cập nhật chi tiết Card (Mô tả, Assignee, Due Date)
-- `[ ]` Tạo API Checklist (Thêm mục, Đánh dấu hoàn thành)
+- `[x]` Tạo API cập nhật chi tiết Card (Mô tả, Assignee, Due Date)
+- `[x]` Tạo API Checklist (Thêm mục, Đánh dấu hoàn thành)
 - `[ ]` Tạo API Comment (Thêm bình luận)
 - `[ ]` Cấu hình Entity Listener ghi nhận Activity Log tự động
 - `[ ]` Tạo API quản lý User Profile (Cập nhật thông tin cá nhân)
 
 ### 12. Frontend - Card Detail, Board Members & Profile
 - `[ ]` Dựng giao diện quản lý Board Members (Danh sách Avatar và Nút Add trên Header)
-- `[ ]` Dựng Modal chi tiết Card (CardDetailModal)
-- `[ ]` Dựng Component ChecklistBlock (Thanh tiến trình)
-- `[ ]` Tích hợp Datepicker cho Due Date
+- `[x]` Dựng Modal chi tiết Card (CardDetailModal)
+- `[x]` Dựng Component ChecklistBlock (Thanh tiến trình)
+- `[x]` Tích hợp Datepicker cho Due Date
 - `[ ]` Dựng giao diện Comment và hiển thị Activity Log
 - `[ ]` Dựng trang User Profile (Cập nhật thông tin cá nhân, ảnh đại diện)
 - `[ ]` Thêm Biểu đồ thống kê gọn nhẹ trên Dashboard

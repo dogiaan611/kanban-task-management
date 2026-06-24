@@ -27,6 +27,7 @@ public class BoardService {
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
     private final KanbanListRepository kanbanListRepository;
+    private final com.kanban.backend.repository.BoardMemberRepository boardMemberRepository;
 
     // 1. TẠO BOARD MỚI TRONG WORKSPACE
     @Transactional
@@ -62,6 +63,22 @@ public class BoardService {
                 board.getName(),
                 board.getCreatedAt()
         );
+    }
+
+    // 2a. LẤY THÔNG TIN MỘT BOARD CỤ THỂ
+    public BoardResponse getBoardById(Long boardId, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new RuntimeException("Board not found"));
+
+        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(board.getWorkspace(), user);
+        if (!isMember) {
+            throw new RuntimeException("Bạn không có quyền xem Board này!");
+        }
+
+        return new BoardResponse(board.getId(), board.getWorkspace().getId(), board.getName(), board.getCreatedAt());
     }
 
     // 2. LẤY DANH SÁCH BOARD CỦA 1 WORKSPACE
@@ -106,5 +123,56 @@ public class BoardService {
         }
 
         boardRepository.delete(board);
+    }
+
+    // 4. LẤY DANH SÁCH THÀNH VIÊN BOARD
+    public List<com.kanban.backend.dto.response.BoardMemberResponse> getBoardMembers(Long boardId, String userEmail) {
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new RuntimeException("Board not found"));
+        
+        List<com.kanban.backend.entity.BoardMember> members = boardMemberRepository.findByBoard(board);
+        return members.stream().map(m -> new com.kanban.backend.dto.response.BoardMemberResponse(
+                m.getId(), m.getUser().getId(), m.getUser().getFullName(), m.getUser().getEmail(), m.getRole()
+        )).collect(Collectors.toList());
+    }
+
+    // 5. THÊM THÀNH VIÊN VÀO BOARD
+    @Transactional
+    public com.kanban.backend.dto.response.BoardMemberResponse addBoardMember(Long boardId, com.kanban.backend.dto.request.AddBoardMemberRequest request, String userEmail) {
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new RuntimeException("Board not found"));
+        
+        User targetUser = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (boardMemberRepository.existsByBoardAndUser(board, targetUser)) {
+            throw new RuntimeException("User is already a member of this board");
+        }
+
+        com.kanban.backend.entity.BoardMember newMember = com.kanban.backend.entity.BoardMember.builder()
+                .board(board)
+                .user(targetUser)
+                .role("MEMBER")
+                .build();
+        
+        newMember = boardMemberRepository.save(newMember);
+        
+        return new com.kanban.backend.dto.response.BoardMemberResponse(
+                newMember.getId(), newMember.getUser().getId(), newMember.getUser().getFullName(), newMember.getUser().getEmail(), newMember.getRole()
+        );
+    }
+
+    // 6. XÓA THÀNH VIÊN KHỎI BOARD
+    @Transactional
+    public void removeBoardMember(Long boardId, Long userId, String userEmail) {
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new RuntimeException("Board not found"));
+        User targetUser = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        com.kanban.backend.entity.BoardMember member = boardMemberRepository.findByBoardAndUser(board, targetUser)
+                .orElseThrow(() -> new RuntimeException("Member not found in board"));
+
+        boardMemberRepository.delete(member);
     }
 }

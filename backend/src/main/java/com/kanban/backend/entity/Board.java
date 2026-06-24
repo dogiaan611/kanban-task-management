@@ -30,6 +30,10 @@ public class Board {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "is_private", nullable = false)
+    @Builder.Default
+    private Boolean isPrivate = false;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

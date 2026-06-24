@@ -80,7 +80,10 @@ public class KanbanListService {
                     card.getTitle(),
                     card.getDescription(),
                     card.getPosition(),
-                    card.getCreatedAt()
+                    card.getCreatedAt(),
+                    card.getDueDate(),
+                    card.getAssignee() != null ? card.getAssignee().getId() : null,
+                    card.getAssignee() != null ? card.getAssignee().getFullName() : null
             )).collect(Collectors.toList());
 
             return new KanbanListResponse(

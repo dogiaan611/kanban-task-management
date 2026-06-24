@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
 import KanbanCard from './KanbanCard';
-import { Plus, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 interface KanbanListProps {
     list: {
@@ -65,7 +65,7 @@ const KanbanList: React.FC<KanbanListProps> = ({ list, index, onDeleteList, onCr
                                 }`}
                             >
                                 {list.cards?.map((card, idx) => (
-                                    <KanbanCard key={card.id} card={card} index={idx} onDelete={onDeleteCard} />
+                                    <KanbanCard key={card.id} card={card} listTitle={list.title} index={idx} onDelete={onDeleteCard} />
                                 ))}
                                 {provided.placeholder}
                             </div>
