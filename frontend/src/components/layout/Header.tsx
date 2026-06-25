@@ -1,39 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Search, UserCircle, ArrowLeft } from 'lucide-react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import BoardMembersBar from '../kanban/BoardMembersBar';
 
 const Header = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [searchParams] = useSearchParams();
+    
+    let boardId: number | undefined;
+    const boardMatch = location.pathname.match(/^\/board\/(\d+)/);
+    if (boardMatch) {
+        boardId = Number(boardMatch[1]);
+    }
     const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
     const [userName, setUserName] = useState('My Profile');
+    const [avatarUrl, setAvatarUrl] = useState('');
 
     useEffect(() => {
         setSearchTerm(searchParams.get('q') || '');
         
-        try {
-            const userStr = localStorage.getItem('user');
-            if (userStr) {
-                const userObj = JSON.parse(userStr);
-                if (userObj && userObj.fullName) {
-                    setUserName(userObj.fullName);
+        const loadUserData = () => {
+            try {
+                const userStr = localStorage.getItem('user');
+                if (userStr) {
+                    const userObj = JSON.parse(userStr);
+                    if (userObj && userObj.fullName) {
+                        setUserName(userObj.fullName);
+                    }
+                    if (userObj && userObj.avatarUrl) {
+                        setAvatarUrl(userObj.avatarUrl);
+                    } else {
+                        setAvatarUrl('');
+                    }
                 }
+            } catch (e) {
+                console.error('Failed to parse user from localStorage', e);
             }
-        } catch (e) {
-            console.error('Failed to parse user from localStorage', e);
-        }
+        };
+
+        loadUserData();
+        window.addEventListener('storage', loadUserData);
+        return () => window.removeEventListener('storage', loadUserData);
     }, [searchParams]);
 
     const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         setSearchTerm(val);
         if (val.trim()) {
-            navigate(`/dashboard?q=${encodeURIComponent(val)}`);
+            navigate(`/workspaces?q=${encodeURIComponent(val)}`);
         } else {
-            // Nếu xóa hết chữ, chỉ bỏ param q khi đang ở trang dashboard
-            if (location.pathname === '/dashboard') {
-                navigate('/dashboard');
+            // Nếu xóa hết chữ, chỉ bỏ param q khi đang ở trang workspaces
+            if (location.pathname === '/workspaces') {
+                navigate('/workspaces');
             }
         }
     };
@@ -51,39 +70,51 @@ const Header = () => {
         </div>
     );
 
+    const isProfilePage = location.pathname === '/profile';
+
     return (
         <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between shrink-0 shadow-sm z-10 sticky top-0">
             {/* Left (Back Button or Search Bar) */}
             <div className="flex-1 flex items-center">
-                {location.pathname !== '/dashboard' ? (
-                    <button 
-                        onClick={() => navigate(-1)}
-                        className="flex items-center text-sm font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 hover:bg-emerald-100 transition-all"
-                    >
-                        <ArrowLeft className="w-5 h-5 mr-2" />
-                        Back to Workspace
-                    </button>
-                ) : (
-                    searchBarElement
+                {!isProfilePage && (
+                    !['/dashboard', '/workspaces'].includes(location.pathname) ? (
+                        <button 
+                            onClick={() => navigate(-1)}
+                            className="flex items-center text-sm font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 hover:bg-emerald-100 transition-all"
+                        >
+                            <ArrowLeft className="w-5 h-5 mr-2" />
+                            {location.pathname.startsWith('/board/') ? 'Back to Boards' : 'Back to Workspace'}
+                        </button>
+                    ) : (
+                        location.pathname === '/workspaces' ? searchBarElement : null
+                    )
                 )}
             </div>
 
             {/* Center (Search Bar only on Workspace Detail pages) */}
             <div className="flex-shrink-0 flex justify-center">
-                {location.pathname !== '/dashboard' && !location.pathname.startsWith('/board/') && searchBarElement}
+                {!isProfilePage && !['/dashboard', '/workspaces'].includes(location.pathname) && !location.pathname.startsWith('/board/') && searchBarElement}
             </div>
 
             {/* Right Actions */}
             <div className="flex-1 flex items-center justify-end space-x-6">
+                {boardId && <BoardMembersBar boardId={boardId} />}
                 <button className="relative p-2 text-slate-400 hover:text-emerald-600 transition-colors">
                     <Bell className="w-6 h-6" />
                     <span className="absolute top-1.5 right-2 w-2.5 h-2.5 bg-rose-500 border-2 border-white rounded-full"></span>
                 </button>
-                <div className="flex items-center space-x-3 cursor-pointer group">
+                <div 
+                    className="flex items-center space-x-3 cursor-pointer group"
+                    onClick={() => navigate('/profile')}
+                >
                     <div className="text-right hidden sm:block">
                         <p className="text-sm font-semibold text-slate-700 group-hover:text-emerald-600 transition-colors">{userName}</p>
                     </div>
-                    <UserCircle className="w-10 h-10 text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                    {avatarUrl ? (
+                        <img src={avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full object-cover border-2 border-transparent group-hover:border-emerald-500 transition-all" />
+                    ) : (
+                        <UserCircle className="w-10 h-10 text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                    )}
                 </div>
             </div>
         </header>

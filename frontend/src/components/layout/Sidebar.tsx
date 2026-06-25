@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Settings, LogOut, Briefcase } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, LogOut, Briefcase, User as UserIcon } from 'lucide-react';
 
 const Sidebar = () => {
     // Xử lý đăng xuất (Xóa token và đẩy về login)
@@ -29,6 +29,20 @@ const Sidebar = () => {
                     }
                 >
                     <LayoutDashboard className="w-5 h-5 mr-3" />
+                    <span>Dashboard</span>
+                </NavLink>
+
+                <NavLink
+                    to="/workspaces"
+                    className={({ isActive }) =>
+                        `flex items-center px-4 py-3 rounded-xl transition-all duration-200 font-bold ${
+                            isActive
+                                ? 'bg-white text-emerald-600 shadow-md shadow-black/10'
+                                : 'text-white/80 hover:bg-white/20 hover:text-white'
+                        }`
+                    }
+                >
+                    <Briefcase className="w-5 h-5 mr-3" />
                     <span>Workspaces</span>
                 </NavLink>
 
@@ -37,10 +51,19 @@ const Sidebar = () => {
                     <Users className="w-5 h-5 mr-3" />
                     <span>Members</span>
                 </div>
-                <div className="flex items-center px-4 py-3 rounded-xl text-white/40 cursor-not-allowed font-medium">
-                    <Settings className="w-5 h-5 mr-3" />
-                    <span>Settings</span>
-                </div>
+                <NavLink
+                    to="/profile"
+                    className={({ isActive }) =>
+                        `flex items-center px-4 py-3 rounded-xl transition-all duration-200 font-bold ${
+                            isActive
+                                ? 'bg-white text-emerald-600 shadow-md shadow-black/10'
+                                : 'text-white/80 hover:bg-white/20 hover:text-white'
+                        }`
+                    }
+                >
+                    <UserIcon className="w-5 h-5 mr-3" />
+                    <span>Profile</span>
+                </NavLink>
             </nav>
 
             {/* Bottom Actions */}

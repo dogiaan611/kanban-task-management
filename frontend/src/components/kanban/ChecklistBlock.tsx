@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { CheckSquare, Trash2 } from 'lucide-react';
 import { getChecklistsByCard, createChecklist, updateChecklist, deleteChecklist, type ChecklistItem } from '../../api/checklistService';
 
@@ -7,6 +8,7 @@ interface ChecklistBlockProps {
 }
 
 const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId }) => {
+    const queryClient = useQueryClient();
     const [items, setItems] = useState<ChecklistItem[]>([]);
     const [newItemTitle, setNewItemTitle] = useState('');
     const [loading, setLoading] = useState(true);
@@ -36,6 +38,7 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId }) => {
             const newItem = await createChecklist(cardId, newItemTitle.trim());
             setItems([...items, newItem]);
             setNewItemTitle('');
+            queryClient.invalidateQueries({ queryKey: ['activities', cardId] });
         } catch (error) {
             console.error('Failed to add item:', error);
         }
@@ -48,6 +51,7 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId }) => {
 
         try {
             await updateChecklist(item.id, { isCompleted: !item.isCompleted });
+            queryClient.invalidateQueries({ queryKey: ['activities', cardId] });
         } catch (error) {
             console.error('Failed to update item:', error);
             // Revert on error
@@ -59,6 +63,7 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId }) => {
         try {
             await deleteChecklist(id);
             setItems(items.filter(i => i.id !== id));
+            queryClient.invalidateQueries({ queryKey: ['activities', cardId] });
         } catch (error) {
             console.error('Failed to delete item:', error);
         }
@@ -72,11 +77,7 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId }) => {
     const progress = items.length === 0 ? 0 : Math.round((completedCount / items.length) * 100);
 
     return (
-        <div className="mt-8">
-            <div className="flex items-center space-x-3 mb-4">
-                <CheckSquare className="w-5 h-5 text-slate-700" />
-                <h3 className="text-lg font-bold text-slate-800">Checklist</h3>
-            </div>
+        <div className="pt-2">
 
             {/* Progress Bar */}
             <div className="flex items-center space-x-3 mb-4">

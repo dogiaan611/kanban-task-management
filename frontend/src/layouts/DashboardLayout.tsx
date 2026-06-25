@@ -16,7 +16,7 @@ const DashboardLayout = () => {
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                 <Header />
                 {/* Phần ruột chính: Các trang con (như Workspace List) sẽ được nhúng vào vị trí thẻ Outlet này */}
-                <main className="flex-1 overflow-x-hidden overflow-y-auto px-8 pb-8 pt-0 relative">
+                <main className="flex-1 overflow-x-hidden overflow-y-auto relative bg-slate-50">
                     <Outlet />
                 </main>
             </div>

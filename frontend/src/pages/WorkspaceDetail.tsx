@@ -53,7 +53,7 @@ const WorkspaceDetail = () => {
     }
 
     return (
-        <div className="max-w-7xl mx-auto animate-in fade-in duration-500">
+        <div className="max-w-7xl mx-auto animate-in fade-in duration-500 px-8 pb-8 pt-0 mt-2">
             {/* Header Section */}
             <div className="flex justify-between items-center mb-0">
                 <div>

@@ -91,7 +91,7 @@ const BoardMembersBar: React.FC<BoardMembersBarProps> = ({ boardId }) => {
     const extraCount = members.length - MAX_VISIBLE;
 
     return (
-        <div className="flex items-center space-x-2" ref={popoverRef}>
+        <div className="flex items-center space-x-6" ref={popoverRef}>
             {/* Avatar Stack */}
             <div className="flex items-center -space-x-2">
                 {visibleMembers.map((member) => (
@@ -115,8 +115,6 @@ const BoardMembersBar: React.FC<BoardMembersBarProps> = ({ boardId }) => {
                 )}
             </div>
 
-            {/* Separator */}
-            <div className="w-px h-6 bg-slate-200 mx-1" />
 
             {/* Invite Button */}
             <button
