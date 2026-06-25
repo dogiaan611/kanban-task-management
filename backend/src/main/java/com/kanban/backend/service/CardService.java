@@ -10,6 +10,7 @@ import com.kanban.backend.entity.KanbanList;
 import com.kanban.backend.entity.User;
 import com.kanban.backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.stream.Collectors;
@@ -23,6 +24,11 @@ public class CardService {
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
     private final ActivityService activityService;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    private void notifyBoardUpdate(Long boardId) {
+        messagingTemplate.convertAndSend("/topic/board/" + boardId, "{\"action\":\"BOARD_UPDATED\"}");
+    }
 
     private void checkAccess(Board board, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
@@ -58,6 +64,8 @@ public class CardService {
         newCard = cardRepository.save(newCard);
 
         activityService.logActivity(newCard, user, "added this card to", list.getTitle());
+        
+        notifyBoardUpdate(list.getBoard().getId());
 
         return new CardResponse(
                 newCard.getId(),
@@ -69,6 +77,7 @@ public class CardService {
                 newCard.getDueDate(),
                 newCard.getAssignee() != null ? newCard.getAssignee().getId() : null,
                 newCard.getAssignee() != null ? newCard.getAssignee().getFullName() : null,
+                newCard.getAssignee() != null ? newCard.getAssignee().getAvatarUrl() : null,
                 newCard.getTags() != null ? newCard.getTags().stream().map(t -> new TagResponse(t.getId(), t.getName(), t.getColor())).collect(Collectors.toList()) : new java.util.ArrayList<>()
         );
     }
@@ -97,6 +106,8 @@ public class CardService {
         if (isListChanged) {
             activityService.logActivity(card, user, "moved this card to", card.getList().getTitle());
         }
+        
+        notifyBoardUpdate(card.getList().getBoard().getId());
     }
 
     @Transactional
@@ -106,6 +117,9 @@ public class CardService {
         
         checkAccess(card.getList().getBoard(), userEmail);
 
+        if (request.getTitle() != null && !request.getTitle().trim().isEmpty()) {
+            card.setTitle(request.getTitle().trim());
+        }
         if (request.getDescription() != null) {
             card.setDescription(request.getDescription());
         }
@@ -113,15 +127,21 @@ public class CardService {
             card.setDueDate(request.getDueDate());
         }
         if (request.getAssigneeId() != null) {
-            User assignee = userRepository.findById(request.getAssigneeId())
-                    .orElseThrow(() -> new RuntimeException("Assignee not found"));
-            card.setAssignee(assignee);
+            if (request.getAssigneeId() == -1) {
+                card.setAssignee(null);
+            } else {
+                User assignee = userRepository.findById(request.getAssigneeId())
+                        .orElseThrow(() -> new RuntimeException("Assignee not found"));
+                card.setAssignee(assignee);
+            }
         }
 
         card = cardRepository.save(card);
         
         User user = userRepository.findByEmail(userEmail).orElseThrow();
         activityService.logActivity(card, user, "updated card details", null);
+        
+        notifyBoardUpdate(card.getList().getBoard().getId());
         
         return new CardResponse(
                 card.getId(),
@@ -133,6 +153,7 @@ public class CardService {
                 card.getDueDate(),
                 card.getAssignee() != null ? card.getAssignee().getId() : null,
                 card.getAssignee() != null ? card.getAssignee().getFullName() : null,
+                card.getAssignee() != null ? card.getAssignee().getAvatarUrl() : null,
                 card.getTags() != null ? card.getTags().stream().map(t -> new TagResponse(t.getId(), t.getName(), t.getColor())).collect(Collectors.toList()) : new java.util.ArrayList<>()
         );
     }
@@ -143,7 +164,10 @@ public class CardService {
                 .orElseThrow(() -> new RuntimeException("Card not found"));
 
         checkAccess(card.getList().getBoard(), userEmail);
+        Long boardId = card.getList().getBoard().getId();
 
         cardRepository.delete(card);
+        
+        notifyBoardUpdate(boardId);
     }
 }

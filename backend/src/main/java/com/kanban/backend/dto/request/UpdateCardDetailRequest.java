@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class UpdateCardDetailRequest {
+    private String title;
     private String description;
     private LocalDateTime dueDate;
     private Long assigneeId;

@@ -60,6 +60,7 @@ public class AuthService {
                 userDetails.getUser().getId(),
                 userDetails.getUsername(),
                 userDetails.getUser().getFullName(),
+                userDetails.getUser().getAvatarUrl(),
                 refreshToken.getToken(),
                 roles
         );

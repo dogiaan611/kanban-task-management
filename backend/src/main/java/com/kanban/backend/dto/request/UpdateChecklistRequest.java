@@ -8,4 +8,6 @@ import lombok.Setter;
 public class UpdateChecklistRequest {
     private String title;
     private Boolean isCompleted;
+    private Double position;
+    private Long assigneeId;
 }

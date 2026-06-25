@@ -49,6 +49,9 @@ public class ChecklistService {
                         item.getTitle(),
                         item.getIsCompleted(),
                         item.getPosition(),
+                        item.getAssignee() != null ? item.getAssignee().getId() : null,
+                        item.getAssignee() != null ? item.getAssignee().getFullName() : null,
+                        item.getAssignee() != null ? item.getAssignee().getAvatarUrl() : null,
                         item.getCreatedAt()
                 )).collect(Collectors.toList());
     }
@@ -81,6 +84,9 @@ public class ChecklistService {
                 item.getTitle(),
                 item.getIsCompleted(),
                 item.getPosition(),
+                null,
+                null,
+                null,
                 item.getCreatedAt()
         );
     }
@@ -103,6 +109,16 @@ public class ChecklistService {
             item.setIsCompleted(request.getIsCompleted());
         }
 
+        if (request.getAssigneeId() != null) {
+            if (request.getAssigneeId() == -1) {
+                item.setAssignee(null);
+            } else {
+                User assignee = userRepository.findById(request.getAssigneeId())
+                        .orElseThrow(() -> new RuntimeException("Assignee not found"));
+                item.setAssignee(assignee);
+            }
+        }
+
         item = checklistRepository.save(item);
 
         if (completionChanged) {
@@ -116,6 +132,9 @@ public class ChecklistService {
                 item.getTitle(),
                 item.getIsCompleted(),
                 item.getPosition(),
+                item.getAssignee() != null ? item.getAssignee().getId() : null,
+                item.getAssignee() != null ? item.getAssignee().getFullName() : null,
+                item.getAssignee() != null ? item.getAssignee().getAvatarUrl() : null,
                 item.getCreatedAt()
         );
     }

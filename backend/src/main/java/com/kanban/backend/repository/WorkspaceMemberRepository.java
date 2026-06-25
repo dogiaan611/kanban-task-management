@@ -25,6 +25,9 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
     // Tìm kiếm workspace theo tên cho user
     List<WorkspaceMember> findByUserAndWorkspace_NameContainingIgnoreCase(User user, String keyword);
 
+    // Lấy tất cả thành viên của một workspace
+    List<WorkspaceMember> findByWorkspace(Workspace workspace);
+
     // Xóa tất cả member của một workspace
     void deleteByWorkspace(Workspace workspace);
 }

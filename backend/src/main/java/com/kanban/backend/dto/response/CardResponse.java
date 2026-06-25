@@ -20,5 +20,6 @@ public class CardResponse {
     private LocalDateTime dueDate;
     private Long assigneeId;
     private String assigneeName;
+    private String assigneeAvatarUrl;
     private List<TagResponse> tags;
 }

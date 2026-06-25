@@ -11,6 +11,7 @@ import com.kanban.backend.entity.KanbanList;
 import com.kanban.backend.entity.User;
 import com.kanban.backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,11 @@ public class KanbanListService {
     private final BoardRepository boardRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    private void notifyBoardUpdate(Long boardId) {
+        messagingTemplate.convertAndSend("/topic/board/" + boardId, "{\"action\":\"BOARD_UPDATED\"}");
+    }
 
     private void checkAccess(Board board, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
@@ -54,6 +60,8 @@ public class KanbanListService {
                 .build();
 
         newList = listRepository.save(newList);
+
+        notifyBoardUpdate(board.getId());
 
         return new KanbanListResponse(
                 newList.getId(),
@@ -85,6 +93,7 @@ public class KanbanListService {
                     card.getDueDate(),
                     card.getAssignee() != null ? card.getAssignee().getId() : null,
                     card.getAssignee() != null ? card.getAssignee().getFullName() : null,
+                    card.getAssignee() != null ? card.getAssignee().getAvatarUrl() : null,
                     card.getTags() != null ? card.getTags().stream().map(t -> new TagResponse(t.getId(), t.getName(), t.getColor())).collect(Collectors.toList()) : new java.util.ArrayList<>()
             )).collect(Collectors.toList());
 
@@ -108,6 +117,8 @@ public class KanbanListService {
 
         list.setPosition(request.getPosition());
         listRepository.save(list);
+        
+        notifyBoardUpdate(list.getBoard().getId());
     }
 
     @Transactional
@@ -116,7 +127,10 @@ public class KanbanListService {
                 .orElseThrow(() -> new RuntimeException("List not found"));
 
         checkAccess(list.getBoard(), userEmail);
+        Long boardId = list.getBoard().getId();
 
         listRepository.delete(list);
+        
+        notifyBoardUpdate(boardId);
     }
 }

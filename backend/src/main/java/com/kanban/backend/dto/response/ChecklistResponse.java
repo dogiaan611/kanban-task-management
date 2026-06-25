@@ -15,5 +15,8 @@ public class ChecklistResponse {
     private String title;
     private Boolean isCompleted;
     private Double position;
+    private Long assigneeId;
+    private String assigneeName;
+    private String assigneeAvatarUrl;
     private LocalDateTime createdAt;
 }

@@ -125,14 +125,14 @@ public class BoardService {
         boardRepository.delete(board);
     }
 
-    // 4. LẤY DANH SÁCH THÀNH VIÊN BOARD
+    // 4. LẤY DANH SÁCH THÀNH VIÊN BOARD (Đồng bộ với Project/Workspace)
     public List<com.kanban.backend.dto.response.BoardMemberResponse> getBoardMembers(Long boardId, String userEmail) {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new RuntimeException("Board not found"));
         
-        List<com.kanban.backend.entity.BoardMember> members = boardMemberRepository.findByBoard(board);
+        List<com.kanban.backend.entity.WorkspaceMember> members = workspaceMemberRepository.findByWorkspace(board.getWorkspace());
         return members.stream().map(m -> new com.kanban.backend.dto.response.BoardMemberResponse(
-                m.getId(), m.getUser().getId(), m.getUser().getFullName(), m.getUser().getEmail(), m.getRole()
+                m.getId(), m.getUser().getId(), m.getUser().getFullName(), m.getUser().getEmail(), m.getRole(), m.getUser().getAvatarUrl()
         )).collect(Collectors.toList());
     }
 
@@ -145,31 +145,24 @@ public class BoardService {
         User targetUser = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (boardMemberRepository.existsByBoardAndUser(board, targetUser)) {
-            throw new RuntimeException("User is already a member of this board");
-        }
-
-        // Tự động thêm vào Workspace nếu chưa là thành viên
+        // Chỉ cần thêm vào Workspace vì Board dùng chung Workspace Members
         Workspace workspace = board.getWorkspace();
+        com.kanban.backend.entity.WorkspaceMember newWorkspaceMember;
+        
         if (!workspaceMemberRepository.existsByWorkspaceAndUser(workspace, targetUser)) {
-            com.kanban.backend.entity.WorkspaceMember newWorkspaceMember = com.kanban.backend.entity.WorkspaceMember.builder()
+            newWorkspaceMember = com.kanban.backend.entity.WorkspaceMember.builder()
                     .workspace(workspace)
                     .user(targetUser)
                     .role("ROLE_MEMBER")
                     .build();
-            workspaceMemberRepository.save(newWorkspaceMember);
+            newWorkspaceMember = workspaceMemberRepository.save(newWorkspaceMember);
+        } else {
+            newWorkspaceMember = workspaceMemberRepository.findByWorkspaceAndUser(workspace, targetUser)
+                    .orElseThrow(() -> new RuntimeException("Member already exists"));
         }
-
-        com.kanban.backend.entity.BoardMember newMember = com.kanban.backend.entity.BoardMember.builder()
-                .board(board)
-                .user(targetUser)
-                .role("MEMBER")
-                .build();
-        
-        newMember = boardMemberRepository.save(newMember);
         
         return new com.kanban.backend.dto.response.BoardMemberResponse(
-                newMember.getId(), newMember.getUser().getId(), newMember.getUser().getFullName(), newMember.getUser().getEmail(), newMember.getRole()
+                newWorkspaceMember.getId(), newWorkspaceMember.getUser().getId(), newWorkspaceMember.getUser().getFullName(), newWorkspaceMember.getUser().getEmail(), newWorkspaceMember.getRole(), newWorkspaceMember.getUser().getAvatarUrl()
         );
     }
 
@@ -181,9 +174,9 @@ public class BoardService {
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        com.kanban.backend.entity.BoardMember member = boardMemberRepository.findByBoardAndUser(board, targetUser)
-                .orElseThrow(() -> new RuntimeException("Member not found in board"));
+        com.kanban.backend.entity.WorkspaceMember member = workspaceMemberRepository.findByWorkspaceAndUser(board.getWorkspace(), targetUser)
+                .orElseThrow(() -> new RuntimeException("Member not found in workspace"));
 
-        boardMemberRepository.delete(member);
+        workspaceMemberRepository.delete(member);
     }
 }
