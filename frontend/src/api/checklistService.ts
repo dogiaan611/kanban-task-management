@@ -5,6 +5,9 @@ export interface ChecklistItem {
     title: string;
     isCompleted: boolean;
     position: number;
+    assigneeId?: number;
+    assigneeName?: string;
+    assigneeAvatarUrl?: string;
     createdAt: string;
 }
 
@@ -18,7 +21,7 @@ export const createChecklist = async (cardId: number, title: string): Promise<Ch
     return response.data;
 };
 
-export const updateChecklist = async (id: number, data: { title?: string; isCompleted?: boolean; position?: number }): Promise<ChecklistItem> => {
+export const updateChecklist = async (id: number, data: { title?: string; isCompleted?: boolean; position?: number; assigneeId?: number }): Promise<ChecklistItem> => {
     const response = await apiClient.put(`/checklists/${id}`, data);
     return response.data;
 };

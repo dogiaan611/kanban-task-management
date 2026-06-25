@@ -97,14 +97,13 @@ const BoardMembersBar: React.FC<BoardMembersBarProps> = ({ boardId }) => {
                 {visibleMembers.map((member) => (
                     <div
                         key={member.id}
-                        className={`relative w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white ring-1 ring-white/50 shadow-sm cursor-default ${getAvatarColor(member.fullName)}`}
+                        className={`relative w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white ring-1 ring-white/50 shadow-sm cursor-default ${!member.avatarUrl ? getAvatarColor(member.fullName) : 'bg-slate-100'}`}
                         title={`${member.fullName} (${member.role})`}
                     >
-                        {getInitials(member.fullName)}
-                        {member.role === 'ROLE_ADMIN' && (
-                            <span className="absolute -top-1 -right-1 bg-amber-400 rounded-full p-0.5">
-                                <Crown className="w-2.5 h-2.5 text-white" />
-                            </span>
+                        {member.avatarUrl ? (
+                            <img src={member.avatarUrl} alt={member.fullName} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                            getInitials(member.fullName)
                         )}
                     </div>
                 ))}
@@ -150,8 +149,12 @@ const BoardMembersBar: React.FC<BoardMembersBarProps> = ({ boardId }) => {
                                     className="flex items-center justify-between px-2 py-2 rounded-xl hover:bg-slate-50 group transition-colors"
                                 >
                                     <div className="flex items-center space-x-3">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${getAvatarColor(member.fullName)}`}>
-                                            {getInitials(member.fullName)}
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${!member.avatarUrl ? getAvatarColor(member.fullName) : 'bg-slate-100'}`}>
+                                            {member.avatarUrl ? (
+                                                <img src={member.avatarUrl} alt={member.fullName} className="w-full h-full rounded-full object-cover" />
+                                            ) : (
+                                                getInitials(member.fullName)
+                                            )}
                                         </div>
                                         <div>
                                             <div className="flex items-center space-x-1">

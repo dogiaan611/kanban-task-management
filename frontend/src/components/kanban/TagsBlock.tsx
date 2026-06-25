@@ -96,13 +96,13 @@ const TagsBlock: React.FC<TagsBlockProps> = ({ cardId, cardTags = [] }) => {
     };
 
     return (
-        <div className="relative mb-6" ref={popoverRef}>
-            <div className="flex items-center space-x-3 mb-2">
+        <div className="flex flex-wrap sm:flex-nowrap items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-8 relative" ref={popoverRef}>
+            <div className="flex items-center space-x-3 w-40 shrink-0">
                 <TagIcon className="w-5 h-5 text-slate-700" />
                 <h3 className="text-lg font-bold text-slate-800">Labels</h3>
             </div>
             
-            <div className="ml-8 flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
                 {cardTags.map(tag => (
                     <span 
                         key={tag.id} 

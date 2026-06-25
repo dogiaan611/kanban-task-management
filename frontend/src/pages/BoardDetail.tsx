@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, type DropResult } from '@hello-pangea/dnd';
@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, LayoutGrid } from 'lucide-react';
 import KanbanList from '../components/kanban/KanbanList';
 import * as kanbanService from '../api/kanbanService';
 import { getBoardById } from '../api/boardService';
+import { createWebSocketClient } from '../api/webSocketService';
 
 const BoardDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -29,6 +30,26 @@ const BoardDetail = () => {
         enabled: !!boardId,
         meta: { boardId }
     });
+
+    useEffect(() => {
+        if (!boardId) return;
+
+        const client = createWebSocketClient();
+        
+        client.onConnect = () => {
+            console.log('Connected to WS for board', boardId);
+            client.subscribe(`/topic/board/${boardId}`, (message) => {
+                console.log('Board updated via WS:', message.body);
+                queryClient.invalidateQueries({ queryKey: ['lists', boardId] });
+            });
+        };
+
+        client.activate();
+
+        return () => {
+            client.deactivate();
+        };
+    }, [boardId, queryClient]);
 
     const createListMutation = useMutation({
         mutationFn: (title: string) => kanbanService.createList(boardId, title),

@@ -36,6 +36,7 @@ export interface BoardMember {
     fullName: string;
     email: string;
     role: string;
+    avatarUrl?: string;
 }
 
 export const getBoardMembers = async (boardId: number): Promise<BoardMember[]> => {

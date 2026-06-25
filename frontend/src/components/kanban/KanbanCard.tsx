@@ -33,7 +33,7 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ card, listTitle, index, onDelet
                     }`}
                 >
                     <div className="flex justify-between items-start">
-                        <div className="flex-1 pr-6">
+                        <div className="flex-1">
                             {card.tags && card.tags.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5 mb-2">
                                     {card.tags.map(tag => (
@@ -45,14 +45,29 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ card, listTitle, index, onDelet
                                     ))}
                                 </div>
                             )}
-                            <p className="text-slate-700 font-medium text-sm leading-relaxed">{card.title}</p>
+                            <div className="flex items-center justify-between">
+                                <p className="text-slate-700 font-medium text-sm leading-relaxed break-words flex-1 pr-2">{card.title}</p>
+                                <div className="flex items-center space-x-1 shrink-0">
+                                    {card.assigneeId && (
+                                        <div className="relative">
+                                            {card.assigneeAvatarUrl ? (
+                                                <img src={card.assigneeAvatarUrl} alt={card.assigneeName} className="w-6 h-6 rounded-full object-cover shadow-sm border border-slate-200" title={`Assigned to ${card.assigneeName}`} />
+                                            ) : (
+                                                <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600 shadow-sm border border-slate-200" title={`Assigned to ${card.assigneeName}`}>
+                                                    {card.assigneeName?.charAt(0).toUpperCase() || 'A'}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onDelete(card.id); }}
+                                        className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1.5 rounded-lg transition-colors"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onDelete(card.id); }}
-                            className="text-slate-300 hover:text-rose-500 hover:bg-rose-50 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all absolute top-3 right-3"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
                     </div>
                 </div>
             )}

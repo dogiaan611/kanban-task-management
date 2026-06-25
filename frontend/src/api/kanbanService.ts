@@ -35,7 +35,7 @@ export const deleteCard = async (cardId: number) => {
     return response.data;
 };
 
-export const updateCardDetail = async (cardId: number, data: { description?: string; dueDate?: string; assigneeId?: number }) => {
+export const updateCardDetail = async (cardId: number, data: { title?: string; description?: string; dueDate?: string; assigneeId?: number; assigneeName?: string; assigneeAvatarUrl?: string; tags?: any[] }) => {
     const response = await apiClient.put(`/cards/${cardId}`, data);
     return response.data;
 };

@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Activity as ActivityIcon, MessageSquare, Send, Trash2, MoreHorizontal, CheckSquare } from 'lucide-react';
+import { Activity as ActivityIcon, MessageSquare, Send, Trash2, MoreHorizontal, CheckSquare, Paperclip, File as FileIcon, Loader2 } from 'lucide-react';
 import * as commentService from '../../api/commentService';
 import * as activityService from '../../api/activityService';
+import { uploadAttachment } from '../../api/attachmentService';
 import ChecklistBlock from './ChecklistBlock';
+
+import { type BoardMember } from '../../api/boardService';
 
 interface CardTimelineProps {
     cardId: number;
+    members: BoardMember[];
 }
 
 const timeAgo = (dateString: string) => {
@@ -23,7 +27,7 @@ const timeAgo = (dateString: string) => {
     return `${days} days ago`;
 };
 
-const CardTimeline: React.FC<CardTimelineProps> = ({ cardId }) => {
+const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members }) => {
     const queryClient = useQueryClient();
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const [newComment, setNewComment] = useState('');
@@ -31,6 +35,10 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId }) => {
     const [openMenuId, setOpenMenuId] = useState<number | null>(null);
     const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
     const [editContent, setEditContent] = useState('');
+    const [isUploadingCommentFile, setIsUploadingCommentFile] = useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const [isUploadingEditFile, setIsUploadingEditFile] = useState(false);
+    const editFileInputRef = React.useRef<HTMLInputElement>(null);
 
     const { data: comments = [] } = useQuery({
         queryKey: ['comments', cardId],
@@ -73,6 +81,80 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId }) => {
             alert(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật bình luận!');
         }
     });
+
+    const uploadCommentAttachmentMutation = useMutation({
+        mutationFn: (file: File) => uploadAttachment(cardId, file),
+        onSuccess: (data) => {
+            const isImage = data.fileType?.startsWith('image/');
+            const markdown = isImage ? `\n![${data.fileName}](${data.fileUrl})` : `\n[${data.fileName}](${data.fileUrl})`;
+            setNewComment(prev => prev + markdown);
+        },
+        onSettled: () => setIsUploadingCommentFile(false)
+    });
+
+    const handleCommentFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            setIsUploadingCommentFile(true);
+            uploadCommentAttachmentMutation.mutate(e.target.files[0]);
+        }
+        e.target.value = '';
+    };
+
+    const uploadEditAttachmentMutation = useMutation({
+        mutationFn: (file: File) => uploadAttachment(cardId, file),
+        onSuccess: (data) => {
+            const isImage = data.fileType?.startsWith('image/');
+            const markdown = isImage ? `\n![${data.fileName}](${data.fileUrl})` : `\n[${data.fileName}](${data.fileUrl})`;
+            setEditContent(prev => prev + markdown);
+        },
+        onSettled: () => setIsUploadingEditFile(false)
+    });
+
+    const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            setIsUploadingEditFile(true);
+            uploadEditAttachmentMutation.mutate(e.target.files[0]);
+        }
+        e.target.value = '';
+    };
+
+    const handleDownload = async (url: string, filename: string) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Download failed', error);
+        }
+    };
+
+    const renderCommentContent = (text: string) => {
+        if (!text) return null;
+        const lines = text.split('\n');
+        return lines.map((line, i) => {
+            const imgMatch = line.match(/^!\[(.*?)\]\((.*?)\)$/);
+            if (imgMatch) {
+                return <img key={i} src={imgMatch[2]} alt={imgMatch[1]} className="max-w-full rounded-lg my-2 max-h-64 object-contain border border-slate-200" />;
+            }
+            const linkMatch = line.match(/^\[(.*?)\]\((.*?)\)$/);
+            if (linkMatch) {
+                return (
+                    <button key={i} onClick={() => handleDownload(linkMatch[2], linkMatch[1])} className="text-emerald-600 hover:text-emerald-700 hover:underline flex items-center space-x-1 my-1 bg-emerald-50 w-fit px-3 py-1.5 rounded-md text-sm border border-emerald-100 transition-colors">
+                        <FileIcon className="w-4 h-4"/>
+                        <span className="font-medium truncate max-w-xs">{linkMatch[1]}</span>
+                    </button>
+                );
+            }
+            return <p key={i} className="min-h-[1.2rem] whitespace-pre-wrap">{line}</p>;
+        });
+    };
 
     const displayedEvents = activeTab === 'comments' 
         ? comments.map(c => ({ ...c, type: 'comment' as const })).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -120,16 +202,20 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId }) => {
             {/* Checklist Tab */}
             {activeTab === 'checklist' && (
                 <div className="bg-slate-100/30 p-4 rounded-xl border border-slate-200">
-                    <ChecklistBlock cardId={cardId} />
+                    <ChecklistBlock cardId={cardId} members={members} />
                 </div>
             )}
 
             {/* Comment Input */}
             {activeTab === 'comments' && (
                 <div className="flex items-start space-x-4 mb-8">
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold flex-shrink-0">
-                        Me
-                    </div>
+                    {currentUser.avatarUrl ? (
+                        <img src={currentUser.avatarUrl} alt="Me" className="w-8 h-8 rounded-full object-cover flex-shrink-0 border-2 border-white shadow-sm" />
+                    ) : (
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold flex-shrink-0 text-xs border-2 border-white shadow-sm">
+                            Me
+                        </div>
+                    )}
                     <div className="flex-1 bg-white border border-slate-200 rounded-xl overflow-hidden focus-within:border-emerald-400 focus-within:ring-1 focus-within:ring-emerald-400 transition-shadow shadow-sm">
                         <textarea 
                             value={newComment}
@@ -137,10 +223,21 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId }) => {
                             placeholder="Write a comment..."
                             className="w-full p-4 outline-none resize-none text-sm text-slate-700 min-h-[80px]"
                         />
-                        <div className="bg-slate-50 px-4 py-2 border-t border-slate-100 flex justify-end">
+                        <div className="bg-slate-50 px-4 py-2 border-t border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center">
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isUploadingCommentFile}
+                                    className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded-md transition-colors flex items-center space-x-1"
+                                    title="Attach a file"
+                                >
+                                    {isUploadingCommentFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                                </button>
+                                <input type="file" ref={fileInputRef} onChange={handleCommentFileChange} className="hidden" />
+                            </div>
                             <button 
                                 onClick={() => { if(newComment.trim()) addCommentMutation.mutate(); }}
-                                disabled={!newComment.trim() || addCommentMutation.isPending}
+                                disabled={!newComment.trim() || addCommentMutation.isPending || isUploadingCommentFile}
                                 className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white px-4 py-1.5 rounded-lg text-sm font-medium flex items-center space-x-2 transition-colors"
                             >
                                 <span>Save</span>
@@ -184,28 +281,41 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId }) => {
                                                             onChange={(e) => setEditContent(e.target.value)}
                                                             className="w-full p-2 border border-slate-200 rounded outline-none resize-none min-h-[60px]"
                                                         />
-                                                        <div className="flex space-x-2 justify-end">
-                                                            <button 
-                                                                onClick={() => setEditingCommentId(null)}
-                                                                className="px-3 py-1 text-xs text-slate-500 hover:bg-slate-100 rounded"
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => {
-                                                                    if(editContent.trim()) {
-                                                                        updateCommentMutation.mutate({ id: event.id, content: editContent.trim() });
-                                                                    }
-                                                                }}
-                                                                disabled={!editContent.trim() || updateCommentMutation.isPending}
-                                                                className="px-3 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:bg-emerald-300"
-                                                            >
-                                                                Save
-                                                            </button>
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center">
+                                                                <button
+                                                                    onClick={() => editFileInputRef.current?.click()}
+                                                                    disabled={isUploadingEditFile}
+                                                                    className="p-1 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors flex items-center"
+                                                                    title="Attach a file"
+                                                                >
+                                                                    {isUploadingEditFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                                                                </button>
+                                                                <input type="file" ref={editFileInputRef} onChange={handleEditFileChange} className="hidden" />
+                                                            </div>
+                                                            <div className="flex space-x-2 justify-end">
+                                                                <button 
+                                                                    onClick={() => setEditingCommentId(null)}
+                                                                    className="px-3 py-1 text-xs text-slate-500 hover:bg-slate-100 rounded"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        if(editContent.trim()) {
+                                                                            updateCommentMutation.mutate({ id: event.id, content: editContent.trim() });
+                                                                        }
+                                                                    }}
+                                                                    disabled={!editContent.trim() || updateCommentMutation.isPending || isUploadingEditFile}
+                                                                    className="px-3 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:bg-emerald-300 flex items-center space-x-1"
+                                                                >
+                                                                    <span>Save</span>
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    (event as any).content
+                                                    renderCommentContent((event as any).content)
                                                 )}
                                             </div>
                                             

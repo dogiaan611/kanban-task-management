@@ -1,27 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckSquare, Trash2 } from 'lucide-react';
+import { CheckSquare, Trash2, UserPlus, User } from 'lucide-react';
 import { getChecklistsByCard, createChecklist, updateChecklist, deleteChecklist, type ChecklistItem } from '../../api/checklistService';
+import { getAvatarColor, getInitials } from '../../utils/stringUtils';
+
+export interface BoardMember {
+    id: number;
+    userId: number;
+    fullName: string;
+    email: string;
+    role: string;
+    avatarUrl?: string;
+}
 
 interface ChecklistBlockProps {
     cardId: number;
+    members: BoardMember[];
 }
 
-const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId }) => {
+const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId, members = [] }) => {
     const queryClient = useQueryClient();
     const [items, setItems] = useState<ChecklistItem[]>([]);
     const [newItemTitle, setNewItemTitle] = useState('');
     const [loading, setLoading] = useState(true);
+    const [assignPopoverId, setAssignPopoverId] = useState<number | null>(null);
+    const popoverRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         loadChecklists();
     }, [cardId]);
 
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+                setAssignPopoverId(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const loadChecklists = async () => {
         try {
             setLoading(true);
             const data = await getChecklistsByCard(cardId);
-            // Sort by createdAt or position
             setItems(data.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
         } catch (error) {
             console.error('Failed to load checklists:', error);
@@ -45,7 +67,6 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId }) => {
     };
 
     const handleToggleComplete = async (item: ChecklistItem) => {
-        // Optimistic update
         const updatedItems = items.map(i => i.id === item.id ? { ...i, isCompleted: !i.isCompleted } : i);
         setItems(updatedItems);
 
@@ -54,7 +75,30 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId }) => {
             queryClient.invalidateQueries({ queryKey: ['activities', cardId] });
         } catch (error) {
             console.error('Failed to update item:', error);
-            // Revert on error
+            setItems(items);
+        }
+    };
+
+    const handleAssignMember = async (item: ChecklistItem, userId: number) => {
+        const isUnassigning = item.assigneeId === userId;
+        const newAssigneeId = isUnassigning ? -1 : userId;
+        
+        // Optimistic update
+        const member = members.find(m => m.userId === userId);
+        const updatedItems = items.map(i => i.id === item.id ? {
+            ...i,
+            assigneeId: isUnassigning ? undefined : userId,
+            assigneeName: isUnassigning ? undefined : member?.fullName,
+            assigneeAvatarUrl: isUnassigning ? undefined : member?.avatarUrl
+        } : i);
+        setItems(updatedItems);
+        setAssignPopoverId(null);
+
+        try {
+            await updateChecklist(item.id, { assigneeId: newAssigneeId });
+            queryClient.invalidateQueries({ queryKey: ['activities', cardId] });
+        } catch (error) {
+            console.error('Failed to assign member to checklist item:', error);
             setItems(items);
         }
     };
@@ -78,7 +122,6 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId }) => {
 
     return (
         <div className="pt-2">
-
             {/* Progress Bar */}
             <div className="flex items-center space-x-3 mb-4">
                 <span className="text-xs font-bold text-slate-500 w-8">{progress}%</span>
@@ -91,9 +134,9 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId }) => {
             </div>
 
             {/* Items List */}
-            <div className="space-y-2 mb-4">
+            <div className="space-y-3 mb-4">
                 {items.map(item => (
-                    <div key={item.id} className="flex items-start group">
+                    <div key={item.id} className="flex items-start group relative">
                         <div className="flex-shrink-0 pt-1">
                             <input 
                                 type="checkbox"
@@ -102,17 +145,81 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId }) => {
                                 className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                             />
                         </div>
-                        <div className="ml-3 flex-1">
-                            <span className={`text-sm ${item.isCompleted ? 'line-through text-slate-500' : 'text-slate-700'}`}>
+                        <div className="ml-3 flex-1 flex flex-col sm:flex-row sm:items-center">
+                            <span className={`text-sm flex-1 ${item.isCompleted ? 'line-through text-slate-500' : 'text-slate-700'}`}>
                                 {item.title}
                             </span>
+                            
+                            {/* Assignee Selection */}
+                            <div className="flex items-center space-x-2 mt-2 sm:mt-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button 
+                                    onClick={() => setAssignPopoverId(assignPopoverId === item.id ? null : item.id)}
+                                    className="flex items-center justify-center rounded-full hover:bg-slate-200 p-1 transition-colors"
+                                    title={item.assigneeName ? `Assigned to ${item.assigneeName}` : 'Assign member'}
+                                >
+                                    {item.assigneeId ? (
+                                        item.assigneeAvatarUrl ? (
+                                            <img src={item.assigneeAvatarUrl} alt={item.assigneeName} className="w-5 h-5 rounded-full object-cover shadow-sm border border-slate-200" />
+                                        ) : (
+                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold shadow-sm border border-slate-200 ${getAvatarColor(item.assigneeName || 'A')}`}>
+                                                {getInitials(item.assigneeName || 'A')}
+                                            </div>
+                                        )
+                                    ) : (
+                                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-300 border-dashed hover:bg-slate-200 hover:text-slate-700 hover:border-slate-400">
+                                            <UserPlus className="w-3 h-3" />
+                                        </div>
+                                    )}
+                                </button>
+
+                                <button 
+                                    onClick={() => handleDeleteItem(item.id)}
+                                    className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-slate-100 transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                                
+                                {/* Always show avatar if assigned, even if not hovering */}
+                                {item.assigneeId && assignPopoverId !== item.id && (
+                                     <div className="absolute right-8 top-0 opacity-100 group-hover:opacity-0 transition-opacity pointer-events-none">
+                                         {item.assigneeAvatarUrl ? (
+                                             <img src={item.assigneeAvatarUrl} alt={item.assigneeName} className="w-5 h-5 rounded-full object-cover shadow-sm border border-slate-200" />
+                                         ) : (
+                                             <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold shadow-sm border border-slate-200 ${getAvatarColor(item.assigneeName || 'A')}`}>
+                                                 {getInitials(item.assigneeName || 'A')}
+                                             </div>
+                                         )}
+                                     </div>
+                                )}
+                                
+                            </div>
                         </div>
-                        <button 
-                            onClick={() => handleDeleteItem(item.id)}
-                            className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
+
+                        {/* Popover */}
+                        {assignPopoverId === item.id && (
+                            <div ref={popoverRef} className="absolute right-0 top-8 w-48 bg-white rounded-lg shadow-xl border border-slate-200 z-30 py-2">
+                                <h4 className="px-3 py-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 mb-1">Assign To</h4>
+                                <div className="max-h-48 overflow-y-auto">
+                                    {members.map(member => (
+                                        <button
+                                            key={member.id}
+                                            onClick={() => handleAssignMember(item, member.userId)}
+                                            className={`w-full flex items-center space-x-2 px-3 py-2 text-sm transition-colors ${item.assigneeId === member.userId ? 'bg-emerald-50 text-emerald-700 font-medium' : 'hover:bg-slate-50 text-slate-700'}`}
+                                        >
+                                            {member.avatarUrl ? (
+                                                <img src={member.avatarUrl} alt={member.fullName} className="w-5 h-5 rounded-full object-cover" />
+                                            ) : (
+                                                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold ${getAvatarColor(member.fullName)}`}>
+                                                    {getInitials(member.fullName)}
+                                                </div>
+                                            )}
+                                            <span className="truncate flex-1 text-left">{member.fullName}</span>
+                                            {item.assigneeId === member.userId && <span className="text-xs font-bold text-emerald-600">✓</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
@@ -125,12 +232,12 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId }) => {
                         value={newItemTitle}
                         onChange={(e) => setNewItemTitle(e.target.value)}
                         placeholder="Add an item..."
-                        className="flex-1 border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="flex-1 border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-shadow"
                     />
                     <button 
                         type="submit"
                         disabled={!newItemTitle.trim()}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
                     >
                         Add
                     </button>
