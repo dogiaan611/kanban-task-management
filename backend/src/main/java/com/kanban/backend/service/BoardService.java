@@ -149,6 +149,17 @@ public class BoardService {
             throw new RuntimeException("User is already a member of this board");
         }
 
+        // Tự động thêm vào Workspace nếu chưa là thành viên
+        Workspace workspace = board.getWorkspace();
+        if (!workspaceMemberRepository.existsByWorkspaceAndUser(workspace, targetUser)) {
+            com.kanban.backend.entity.WorkspaceMember newWorkspaceMember = com.kanban.backend.entity.WorkspaceMember.builder()
+                    .workspace(workspace)
+                    .user(targetUser)
+                    .role("ROLE_MEMBER")
+                    .build();
+            workspaceMemberRepository.save(newWorkspaceMember);
+        }
+
         com.kanban.backend.entity.BoardMember newMember = com.kanban.backend.entity.BoardMember.builder()
                 .board(board)
                 .user(targetUser)

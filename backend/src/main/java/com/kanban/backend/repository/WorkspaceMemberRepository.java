@@ -14,6 +14,8 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
     // Lấy danh sách các workspace mà một user đang tham gia
     List<WorkspaceMember> findByUser(User user);
 
+    long countByUser(User user);
+
     // Kiểm tra xem user này đã ở trong workspace chưa
     boolean existsByWorkspaceAndUser(Workspace workspace, User user);
 

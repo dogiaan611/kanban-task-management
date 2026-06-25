@@ -26,6 +26,7 @@ public class ChecklistService {
     private final CardRepository cardRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
+    private final ActivityService activityService;
 
     private void checkAccess(Board board, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
@@ -70,6 +71,9 @@ public class ChecklistService {
                 .build();
 
         item = checklistRepository.save(item);
+        
+        User user = userRepository.findByEmail(userEmail).orElseThrow();
+        activityService.logActivity(card, user, "added checklist item", item.getTitle());
 
         return new ChecklistResponse(
                 item.getId(),
@@ -90,11 +94,21 @@ public class ChecklistService {
         if (request.getTitle() != null) {
             item.setTitle(request.getTitle());
         }
-        if (request.getIsCompleted() != null) {
+        
+        boolean completionChanged = false;
+        boolean newCompletionState = false;
+        if (request.getIsCompleted() != null && !request.getIsCompleted().equals(item.getIsCompleted())) {
+            completionChanged = true;
+            newCompletionState = request.getIsCompleted();
             item.setIsCompleted(request.getIsCompleted());
         }
 
         item = checklistRepository.save(item);
+
+        if (completionChanged) {
+            User user = userRepository.findByEmail(userEmail).orElseThrow();
+            activityService.logActivity(item.getCard(), user, newCompletionState ? "completed checklist item" : "uncompleted checklist item", item.getTitle());
+        }
 
         return new ChecklistResponse(
                 item.getId(),
@@ -112,6 +126,8 @@ public class ChecklistService {
                 .orElseThrow(() -> new RuntimeException("Checklist item not found"));
         checkAccess(item.getCard().getList().getBoard(), userEmail);
 
+        User user = userRepository.findByEmail(userEmail).orElseThrow();
+        activityService.logActivity(item.getCard(), user, "deleted checklist item", item.getTitle());
         checklistRepository.delete(item);
     }
 }

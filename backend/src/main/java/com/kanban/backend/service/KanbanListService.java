@@ -4,6 +4,7 @@ import com.kanban.backend.dto.request.ListRequest;
 import com.kanban.backend.dto.request.UpdatePositionRequest;
 import com.kanban.backend.dto.response.CardResponse;
 import com.kanban.backend.dto.response.KanbanListResponse;
+import com.kanban.backend.dto.response.TagResponse;
 import com.kanban.backend.entity.Board;
 import com.kanban.backend.entity.Card;
 import com.kanban.backend.entity.KanbanList;
@@ -83,7 +84,8 @@ public class KanbanListService {
                     card.getCreatedAt(),
                     card.getDueDate(),
                     card.getAssignee() != null ? card.getAssignee().getId() : null,
-                    card.getAssignee() != null ? card.getAssignee().getFullName() : null
+                    card.getAssignee() != null ? card.getAssignee().getFullName() : null,
+                    card.getTags() != null ? card.getTags().stream().map(t -> new TagResponse(t.getId(), t.getName(), t.getColor())).collect(Collectors.toList()) : new java.util.ArrayList<>()
             )).collect(Collectors.toList());
 
             return new KanbanListResponse(

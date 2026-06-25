@@ -64,6 +64,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll() // Cho phép tất cả truy cập API đăng ký, đăng nhập
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Cho phép xem document API
+                        .requestMatchers("/error").permitAll() // Cho phép /error để trả về mã lỗi thực sự (thay vì 401)
                         .anyRequest().authenticated() // Tất cả các đường dẫn khác bắt buộc phải có Token hợp lệ
                 );
 

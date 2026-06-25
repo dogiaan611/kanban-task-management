@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -19,4 +20,5 @@ public class CardResponse {
     private LocalDateTime dueDate;
     private Long assigneeId;
     private String assigneeName;
+    private List<TagResponse> tags;
 }

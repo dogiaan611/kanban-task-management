@@ -3,6 +3,7 @@ package com.kanban.backend.service;
 import com.kanban.backend.dto.request.CardRequest;
 import com.kanban.backend.dto.request.UpdatePositionRequest;
 import com.kanban.backend.dto.response.CardResponse;
+import com.kanban.backend.dto.response.TagResponse;
 import com.kanban.backend.entity.Board;
 import com.kanban.backend.entity.Card;
 import com.kanban.backend.entity.KanbanList;
@@ -11,6 +12,7 @@ import com.kanban.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +22,7 @@ public class CardService {
     private final KanbanListRepository listRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
+    private final ActivityService activityService;
 
     private void checkAccess(Board board, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
@@ -34,8 +37,12 @@ public class CardService {
     public CardResponse createCard(CardRequest request, String userEmail) {
         KanbanList list = listRepository.findById(request.getListId())
                 .orElseThrow(() -> new RuntimeException("List not found"));
-
-        checkAccess(list.getBoard(), userEmail);
+        
+        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new RuntimeException("User not found"));
+        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(list.getBoard().getWorkspace(), user);
+        if (!isMember) {
+            throw new RuntimeException("You do not have access to this board.");
+        }
 
         Double maxPosition = cardRepository.findTopByListOrderByPositionDesc(list)
                 .map(Card::getPosition)
@@ -50,6 +57,8 @@ public class CardService {
 
         newCard = cardRepository.save(newCard);
 
+        activityService.logActivity(newCard, user, "added this card to", list.getTitle());
+
         return new CardResponse(
                 newCard.getId(),
                 list.getId(),
@@ -59,7 +68,8 @@ public class CardService {
                 newCard.getCreatedAt(),
                 newCard.getDueDate(),
                 newCard.getAssignee() != null ? newCard.getAssignee().getId() : null,
-                newCard.getAssignee() != null ? newCard.getAssignee().getFullName() : null
+                newCard.getAssignee() != null ? newCard.getAssignee().getFullName() : null,
+                newCard.getTags() != null ? newCard.getTags().stream().map(t -> new TagResponse(t.getId(), t.getName(), t.getColor())).collect(Collectors.toList()) : new java.util.ArrayList<>()
         );
     }
 
@@ -70,8 +80,10 @@ public class CardService {
         
         checkAccess(card.getList().getBoard(), userEmail);
 
+        boolean isListChanged = request.getParentId() != null && !card.getList().getId().equals(request.getParentId());
+
         // If card is moved to another list
-        if (request.getParentId() != null && !card.getList().getId().equals(request.getParentId())) {
+        if (isListChanged) {
             KanbanList newList = listRepository.findById(request.getParentId())
                     .orElseThrow(() -> new RuntimeException("Destination list not found"));
             checkAccess(newList.getBoard(), userEmail);
@@ -80,6 +92,11 @@ public class CardService {
 
         card.setPosition(request.getPosition());
         cardRepository.save(card);
+        
+        User user = userRepository.findByEmail(userEmail).orElseThrow();
+        if (isListChanged) {
+            activityService.logActivity(card, user, "moved this card to", card.getList().getTitle());
+        }
     }
 
     @Transactional
@@ -98,11 +115,14 @@ public class CardService {
         if (request.getAssigneeId() != null) {
             User assignee = userRepository.findById(request.getAssigneeId())
                     .orElseThrow(() -> new RuntimeException("Assignee not found"));
-            // In the future, verify assignee is a board member
             card.setAssignee(assignee);
         }
 
         card = cardRepository.save(card);
+        
+        User user = userRepository.findByEmail(userEmail).orElseThrow();
+        activityService.logActivity(card, user, "updated card details", null);
+        
         return new CardResponse(
                 card.getId(),
                 card.getList().getId(),
@@ -112,7 +132,8 @@ public class CardService {
                 card.getCreatedAt(),
                 card.getDueDate(),
                 card.getAssignee() != null ? card.getAssignee().getId() : null,
-                card.getAssignee() != null ? card.getAssignee().getFullName() : null
+                card.getAssignee() != null ? card.getAssignee().getFullName() : null,
+                card.getTags() != null ? card.getTags().stream().map(t -> new TagResponse(t.getId(), t.getName(), t.getColor())).collect(Collectors.toList()) : new java.util.ArrayList<>()
         );
     }
 
