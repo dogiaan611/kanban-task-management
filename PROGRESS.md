@@ -117,8 +117,8 @@
   - Phân quyền mức Workspace (Owner vs Member)
   - Phân quyền mức Board (Admin, Member, Viewer)
 - `[x]` Tệp đính kèm (Attachments) vào thẻ (Backend Upload, Frontend UI)
-- `[ ]` Lọc và Tìm kiếm nâng cao trên Board
-- `[ ]` Chế độ xem Lịch (Calendar View) sử dụng dữ liệu Due Date
+- `[x]` Lọc và Tìm kiếm nâng cao trên Board
+- `[x]` Chế độ xem Lịch (Calendar View) sử dụng dữ liệu Due Date
 - `[ ]` Nhắc tên người dùng (@Mentions) trong Comment
 - `[ ]` Tự động hóa (Automations) cho các thao tác kéo thả
 

@@ -11,6 +11,8 @@ import com.kanban.backend.repository.KanbanListRepository;
 import com.kanban.backend.repository.UserRepository;
 import com.kanban.backend.repository.WorkspaceMemberRepository;
 import com.kanban.backend.repository.WorkspaceRepository;
+import com.kanban.backend.repository.CardRepository;
+import com.kanban.backend.entity.Card;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,7 @@ public class BoardService {
     private final UserRepository userRepository;
     private final KanbanListRepository kanbanListRepository;
     private final com.kanban.backend.repository.BoardMemberRepository boardMemberRepository;
+    private final CardRepository cardRepository;
 
     // 1. TẠO BOARD MỚI TRONG WORKSPACE
     @Transactional
@@ -174,9 +177,75 @@ public class BoardService {
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        com.kanban.backend.entity.WorkspaceMember member = workspaceMemberRepository.findByWorkspaceAndUser(board.getWorkspace(), targetUser)
-                .orElseThrow(() -> new RuntimeException("Member not found in workspace"));
+        com.kanban.backend.entity.BoardMember member = boardMemberRepository.findByBoardAndUser(board, targetUser)
+                .orElseThrow(() -> new RuntimeException("Member not found in board"));
 
-        workspaceMemberRepository.delete(member);
+        boardMemberRepository.delete(member);
+    }
+
+    // 7. TÌM KIẾM VÀ LỌC CARDS TRONG BOARD
+    public List<com.kanban.backend.dto.response.CardResponse> searchCardsInBoard(
+            Long boardId, String query, Long tagId, Long assigneeId, String userEmail) {
+        
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new RuntimeException("Board not found"));
+        
+        // Kiểm tra quyền truy cập của user
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(board.getWorkspace(), user);
+        if (!isMember) {
+            throw new RuntimeException("Bạn không có quyền truy cập Board này!");
+        }
+
+        // Lấy tất cả các lists trong Board
+        List<KanbanList> lists = kanbanListRepository.findByBoardOrderByPositionAsc(board);
+        
+        // Dùng flatMap gom toàn bộ cards
+        List<Card> allCards = lists.stream()
+                .flatMap(list -> cardRepository.findByListOrderByPositionAsc(list).stream())
+                .collect(Collectors.toList());
+
+        // Thực hiện lọc tại Service layer
+        return allCards.stream()
+                .filter(card -> {
+                    // Lọc theo query (title hoặc description)
+                    if (query != null && !query.trim().isEmpty()) {
+                        String lowerQuery = query.toLowerCase();
+                        boolean matchTitle = card.getTitle() != null && card.getTitle().toLowerCase().contains(lowerQuery);
+                        boolean matchDesc = card.getDescription() != null && card.getDescription().toLowerCase().contains(lowerQuery);
+                        if (!matchTitle && !matchDesc) {
+                            return false;
+                        }
+                    }
+                    // Lọc theo tagId
+                    if (tagId != null) {
+                        boolean hasTag = card.getTags() != null && card.getTags().stream().anyMatch(t -> t.getId().equals(tagId));
+                        if (!hasTag) {
+                            return false;
+                        }
+                    }
+                    // Lọc theo assigneeId
+                    if (assigneeId != null) {
+                        if (card.getAssignee() == null || !card.getAssignee().getId().equals(assigneeId)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })
+                .map(card -> new com.kanban.backend.dto.response.CardResponse(
+                        card.getId(),
+                        card.getList().getId(),
+                        card.getTitle(),
+                        card.getDescription(),
+                        card.getPosition(),
+                        card.getCreatedAt(),
+                        card.getDueDate(),
+                        card.getAssignee() != null ? card.getAssignee().getId() : null,
+                        card.getAssignee() != null ? card.getAssignee().getFullName() : null,
+                        card.getAssignee() != null ? card.getAssignee().getAvatarUrl() : null,
+                        card.getTags() != null ? card.getTags().stream().map(t -> new com.kanban.backend.dto.response.TagResponse(t.getId(), t.getName(), t.getColor())).collect(Collectors.toList()) : new java.util.ArrayList<>()
+                ))
+                .collect(Collectors.toList());
     }
 }

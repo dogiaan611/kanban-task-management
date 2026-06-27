@@ -103,4 +103,19 @@ public class BoardController {
             return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         }
     }
+
+    // 7. API Tìm kiếm & Lọc Card trên Board
+    @GetMapping("/{id}/cards/search")
+    public ResponseEntity<?> searchCardsInBoard(
+            @PathVariable Long id,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) Long tagId,
+            @RequestParam(required = false) Long assigneeId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            return ResponseEntity.ok(boardService.searchCardsInBoard(id, query, tagId, assigneeId, userDetails.getUsername()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
 }
