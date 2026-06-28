@@ -28,18 +28,15 @@ public class KanbanListService {
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final PermissionService permissionService;
 
     private void notifyBoardUpdate(Long boardId) {
         messagingTemplate.convertAndSend("/topic/board/" + boardId, "{\"action\":\"BOARD_UPDATED\"}");
     }
 
-    private void checkAccess(Board board, String userEmail) {
-        User user = userRepository.findByEmail(userEmail)
+    private User getUser(String email) {
+        return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(board.getWorkspace(), user);
-        if (!isMember) {
-            throw new RuntimeException("You do not have access to this board.");
-        }
     }
 
     @Transactional
@@ -47,7 +44,8 @@ public class KanbanListService {
         Board board = boardRepository.findById(request.getBoardId())
                 .orElseThrow(() -> new RuntimeException("Board not found"));
 
-        checkAccess(board, userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardMemberOrAdmin(board, user);
 
         Double maxPosition = listRepository.findTopByBoardOrderByPositionDesc(board)
                 .map(KanbanList::getPosition)
@@ -77,7 +75,8 @@ public class KanbanListService {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new RuntimeException("Board not found"));
 
-        checkAccess(board, userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardViewerOrAbove(board, user);
 
         List<KanbanList> lists = listRepository.findByBoardOrderByPositionAsc(board);
 
@@ -113,7 +112,8 @@ public class KanbanListService {
         KanbanList list = listRepository.findById(listId)
                 .orElseThrow(() -> new RuntimeException("List not found"));
         
-        checkAccess(list.getBoard(), userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardMemberOrAdmin(list.getBoard(), user);
 
         list.setPosition(request.getPosition());
         listRepository.save(list);
@@ -126,7 +126,8 @@ public class KanbanListService {
         KanbanList list = listRepository.findById(listId)
                 .orElseThrow(() -> new RuntimeException("List not found"));
 
-        checkAccess(list.getBoard(), userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardAdmin(list.getBoard(), user);
         Long boardId = list.getBoard().getId();
 
         listRepository.delete(list);

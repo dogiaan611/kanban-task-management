@@ -1,7 +1,5 @@
 -- Align legacy workspace_invitations schema with current entity
-ALTER TABLE workspace_invitations
-    RENAME COLUMN expiry_date TO expires_at;
-
+-- RENAME COLUMN expiry_date TO expires_at; (Already renamed)
 ALTER TABLE workspace_invitations
     ADD COLUMN IF NOT EXISTS invited_by BIGINT;
 

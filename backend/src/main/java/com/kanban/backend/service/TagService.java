@@ -28,21 +28,19 @@ public class TagService {
     private final UserRepository userRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final ActivityService activityService;
+    private final PermissionService permissionService;
 
-    private void checkAccess(Board board, String userEmail) {
-        User user = userRepository.findByEmail(userEmail)
+    private User getUser(String email) {
+        return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(board.getWorkspace(), user);
-        if (!isMember) {
-            throw new RuntimeException("You do not have access to this board.");
-        }
     }
 
     @Transactional(readOnly = true)
     public List<TagResponse> getTagsByBoard(Long boardId, String userEmail) {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new RuntimeException("Board not found"));
-        checkAccess(board, userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardViewerOrAbove(board, user);
 
         return tagRepository.findByBoard(board).stream()
                 .map(t -> new TagResponse(t.getId(), t.getName(), t.getColor()))
@@ -53,7 +51,8 @@ public class TagService {
     public TagResponse createTag(Long boardId, TagRequest request, String userEmail) {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new RuntimeException("Board not found"));
-        checkAccess(board, userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardMemberOrAdmin(board, user);
 
         Tag tag = Tag.builder()
                 .board(board)
@@ -69,7 +68,8 @@ public class TagService {
     public void deleteTag(Long tagId, String userEmail) {
         Tag tag = tagRepository.findById(tagId)
                 .orElseThrow(() -> new RuntimeException("Tag not found"));
-        checkAccess(tag.getBoard(), userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardAdmin(tag.getBoard(), user);
         tagRepository.delete(tag);
     }
 
@@ -77,7 +77,8 @@ public class TagService {
     public void addTagToCard(Long cardId, Long tagId, String userEmail) {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new RuntimeException("Card not found"));
-        checkAccess(card.getList().getBoard(), userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardMemberOrAdmin(card.getList().getBoard(), user);
 
         Tag tag = tagRepository.findById(tagId)
                 .orElseThrow(() -> new RuntimeException("Tag not found"));
@@ -88,8 +89,6 @@ public class TagService {
 
         card.getTags().add(tag);
         cardRepository.save(card);
-        
-        User user = userRepository.findByEmail(userEmail).orElseThrow();
         activityService.logActivity(card, user, "added tag", tag.getName() != null && !tag.getName().isEmpty() ? tag.getName() : "color " + tag.getColor());
     }
 
@@ -97,15 +96,14 @@ public class TagService {
     public void removeTagFromCard(Long cardId, Long tagId, String userEmail) {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new RuntimeException("Card not found"));
-        checkAccess(card.getList().getBoard(), userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardMemberOrAdmin(card.getList().getBoard(), user);
 
         Tag tag = tagRepository.findById(tagId)
                 .orElseThrow(() -> new RuntimeException("Tag not found"));
 
         card.getTags().remove(tag);
         cardRepository.save(card);
-        
-        User user = userRepository.findByEmail(userEmail).orElseThrow();
         activityService.logActivity(card, user, "removed tag", tag.getName() != null && !tag.getName().isEmpty() ? tag.getName() : "color " + tag.getColor());
     }
 }

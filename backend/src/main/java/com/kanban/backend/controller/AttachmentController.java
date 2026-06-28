@@ -34,8 +34,9 @@ public class AttachmentController {
 
     @GetMapping("/cards/{cardId}/attachments")
     public ResponseEntity<List<AttachmentResponse>> getAttachments(
-            @PathVariable Long cardId) {
-        return ResponseEntity.ok(attachmentService.getAttachmentsByCard(cardId));
+            @PathVariable Long cardId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(attachmentService.getAttachmentsByCard(cardId, userDetails.getUsername()));
     }
 
     @DeleteMapping("/attachments/{id}")

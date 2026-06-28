@@ -104,6 +104,25 @@ public class BoardController {
         }
     }
 
+    // 6.5 API Cập nhật quyền thành viên trên Board
+    @PutMapping("/{id}/members/{userId}/role")
+    public ResponseEntity<?> updateBoardMemberRole(
+            @PathVariable Long id,
+            @PathVariable Long userId,
+            @RequestBody java.util.Map<String, String> payload,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            String role = payload.get("role");
+            if (role == null || role.isEmpty()) {
+                return ResponseEntity.badRequest().body(new MessageResponse("Role không hợp lệ"));
+            }
+            boardService.updateBoardMemberRole(id, userId, role, userDetails.getUsername());
+            return ResponseEntity.ok(new MessageResponse("Cập nhật quyền thành công!"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+
     // 7. API Gửi email mời thành viên
     @PostMapping("/{id}/invitations")
     public ResponseEntity<?> inviteBoardMember(

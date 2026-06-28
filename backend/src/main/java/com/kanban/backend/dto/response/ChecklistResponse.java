@@ -13,7 +13,10 @@ public class ChecklistResponse {
     private Long id;
     private Long cardId;
     private String title;
+    
+    @com.fasterxml.jackson.annotation.JsonProperty("isCompleted")
     private Boolean isCompleted;
+    
     private Double position;
     private Long assigneeId;
     private String assigneeName;

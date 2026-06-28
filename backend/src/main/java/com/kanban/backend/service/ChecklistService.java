@@ -27,20 +27,19 @@ public class ChecklistService {
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
     private final ActivityService activityService;
+    private final NotificationService notificationService;
+    private final PermissionService permissionService;
 
-    private void checkAccess(Board board, String userEmail) {
-        User user = userRepository.findByEmail(userEmail)
+    private User getUser(String email) {
+        return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(board.getWorkspace(), user);
-        if (!isMember) {
-            throw new RuntimeException("You do not have access to this board.");
-        }
     }
 
     public List<ChecklistResponse> getChecklistsByCard(Long cardId, String userEmail) {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new RuntimeException("Card not found"));
-        checkAccess(card.getList().getBoard(), userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardViewerOrAbove(card.getList().getBoard(), user);
 
         return checklistRepository.findByCardOrderByPositionAsc(card).stream()
                 .map(item -> new ChecklistResponse(
@@ -60,7 +59,8 @@ public class ChecklistService {
     public ChecklistResponse createChecklist(Long cardId, ChecklistRequest request, String userEmail) {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new RuntimeException("Card not found"));
-        checkAccess(card.getList().getBoard(), userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardMemberOrAdmin(card.getList().getBoard(), user);
 
         Double maxPosition = checklistRepository.findTopByCardOrderByPositionDesc(card)
                 .map(Checklist::getPosition)
@@ -75,8 +75,8 @@ public class ChecklistService {
 
         item = checklistRepository.save(item);
         
-        User user = userRepository.findByEmail(userEmail).orElseThrow();
         activityService.logActivity(card, user, "added checklist item", item.getTitle());
+        notificationService.notifyCardActivity(card, user, "added checklist item", item.getTitle());
 
         return new ChecklistResponse(
                 item.getId(),
@@ -95,7 +95,8 @@ public class ChecklistService {
     public ChecklistResponse updateChecklist(Long id, UpdateChecklistRequest request, String userEmail) {
         Checklist item = checklistRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Checklist item not found"));
-        checkAccess(item.getCard().getList().getBoard(), userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardMemberOrAdmin(item.getCard().getList().getBoard(), user);
 
         if (request.getTitle() != null) {
             item.setTitle(request.getTitle());
@@ -116,14 +117,17 @@ public class ChecklistService {
                 User assignee = userRepository.findById(request.getAssigneeId())
                         .orElseThrow(() -> new RuntimeException("Assignee not found"));
                 item.setAssignee(assignee);
+                notificationService.notifyCardActivity(item.getCard(), user, "assigned checklist item to", assignee.getFullName());
             }
         }
 
         item = checklistRepository.save(item);
 
         if (completionChanged) {
-            User user = userRepository.findByEmail(userEmail).orElseThrow();
             activityService.logActivity(item.getCard(), user, newCompletionState ? "completed checklist item" : "uncompleted checklist item", item.getTitle());
+            if (newCompletionState) {
+                notificationService.notifyCardActivity(item.getCard(), user, "completed checklist item", item.getTitle());
+            }
         }
 
         return new ChecklistResponse(
@@ -140,12 +144,28 @@ public class ChecklistService {
     }
 
     @Transactional
+    public void markAllComplete(Card card, User user) {
+        List<Checklist> items = checklistRepository.findByCardOrderByPositionAsc(card);
+        boolean changed = false;
+        for (Checklist item : items) {
+            if (!Boolean.TRUE.equals(item.getIsCompleted())) {
+                item.setIsCompleted(true);
+                changed = true;
+            }
+        }
+        if (changed) {
+            checklistRepository.saveAll(items);
+            activityService.logActivity(card, user, "Automation", "Marked all checklists as complete");
+        }
+    }
+
+    @Transactional
     public void deleteChecklist(Long id, String userEmail) {
         Checklist item = checklistRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Checklist item not found"));
-        checkAccess(item.getCard().getList().getBoard(), userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardMemberOrAdmin(item.getCard().getList().getBoard(), user);
 
-        User user = userRepository.findByEmail(userEmail).orElseThrow();
         activityService.logActivity(item.getCard(), user, "deleted checklist item", item.getTitle());
         checklistRepository.delete(item);
     }

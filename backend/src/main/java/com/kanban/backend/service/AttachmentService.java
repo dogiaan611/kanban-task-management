@@ -27,7 +27,9 @@ public class AttachmentService {
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final ActivityService activityService;
+    private final NotificationService notificationService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final PermissionService permissionService;
 
     private void notifyBoardUpdate(Long boardId) {
         messagingTemplate.convertAndSend("/topic/board/" + boardId, "{\"action\":\"BOARD_UPDATED\"}");
@@ -41,7 +43,7 @@ public class AttachmentService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // TODO: Check access permissions if needed
+        permissionService.checkBoardMemberOrAdmin(card.getList().getBoard(), user);
 
         String originalFileName = file.getOriginalFilename();
         String storedFileName = fileStorageService.storeFile(file);
@@ -56,16 +58,18 @@ public class AttachmentService {
                 .build();
 
         attachment = attachmentRepository.save(attachment);
-        
         activityService.logActivity(card, user, "attached a file: " + originalFileName, null);
+        notificationService.notifyCardActivity(card, user, "attached a file", originalFileName);
         notifyBoardUpdate(card.getList().getBoard().getId());
 
         return mapToResponse(attachment);
     }
 
-    public List<AttachmentResponse> getAttachmentsByCard(Long cardId) {
+    public List<AttachmentResponse> getAttachmentsByCard(Long cardId, String userEmail) {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new RuntimeException("Card not found"));
+        User user = userRepository.findByEmail(userEmail).orElseThrow();
+        permissionService.checkBoardViewerOrAbove(card.getList().getBoard(), user);
         return attachmentRepository.findByCardOrderByUploadedAtDesc(card).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -76,12 +80,12 @@ public class AttachmentService {
         Attachment attachment = attachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new RuntimeException("Attachment not found"));
         
-        // TODO: Check access
+        User user = userRepository.findByEmail(userEmail).orElseThrow();
+        permissionService.checkBoardMemberOrAdmin(attachment.getCard().getList().getBoard(), user);
 
         fileStorageService.deleteFile(attachment.getFilePath());
         
         Card card = attachment.getCard();
-        User user = userRepository.findByEmail(userEmail).orElseThrow();
         
         attachmentRepository.delete(attachment);
         

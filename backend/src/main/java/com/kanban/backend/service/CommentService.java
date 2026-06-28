@@ -22,11 +22,12 @@ public class CommentService {
     private final UserRepository userRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final ActivityService activityService;
+    private final NotificationService notificationService;
+    private final PermissionService permissionService;
 
     private User getUserAndCheckAccess(Card card, String email) {
         User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(card.getList().getBoard().getWorkspace(), user);
-        if (!isMember) throw new RuntimeException("Access denied");
+        permissionService.checkBoardMemberOrAdmin(card.getList().getBoard(), user);
         return user;
     }
 
@@ -43,6 +44,19 @@ public class CommentService {
         comment = commentRepository.save(comment);
 
         activityService.logActivity(card, user, "commented", request.getContent());
+        notificationService.notifyCardActivity(card, user, "commented", request.getContent());
+
+        // Xử lý nhắc tên (Mentions)
+        if (request.getMentionedUserIds() != null && !request.getMentionedUserIds().isEmpty()) {
+            for (Long mentionedId : request.getMentionedUserIds()) {
+                userRepository.findById(mentionedId).ifPresent(targetUser -> {
+                    // Check if targetUser is a member of the workspace
+                    if (workspaceMemberRepository.existsByWorkspaceAndUser(card.getList().getBoard().getWorkspace(), targetUser)) {
+                        notificationService.notifyUserMention(targetUser, user, card);
+                    }
+                });
+            }
+        }
 
         return new CommentResponse(comment.getId(), comment.getContent(), user.getId(), user.getFullName(), user.getAvatarUrl(), comment.getCreatedAt(), comment.getUpdatedAt());
     }

@@ -25,6 +25,7 @@ public class InvitationService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final NotificationService notificationService;
+    private final PermissionService permissionService;
 
     @Value("${app.frontend-url:http://localhost:5173}")
     private String frontendUrl;
@@ -40,8 +41,7 @@ public class InvitationService {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new RuntimeException("Workspace not found"));
 
-        workspaceMemberRepository.findByWorkspaceAndUser(workspace, inviter)
-                .orElseThrow(() -> new RuntimeException("You are not a member of this workspace"));
+        permissionService.checkWorkspaceAdmin(workspace, inviter);
 
         String email = request.getEmail().trim();
 

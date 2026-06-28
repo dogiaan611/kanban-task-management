@@ -29,6 +29,7 @@ public class BoardService {
     private final KanbanListRepository kanbanListRepository;
     private final com.kanban.backend.repository.BoardMemberRepository boardMemberRepository;
     private final InvitationService invitationService;
+    private final PermissionService permissionService;
 
     // 1. TẠO BOARD MỚI TRONG WORKSPACE
     @Transactional
@@ -39,11 +40,7 @@ public class BoardService {
         Workspace workspace = workspaceRepository.findById(request.getWorkspaceId())
                 .orElseThrow(() -> new RuntimeException("Workspace not found"));
 
-        // Kiểm tra xem user hiện tại có phải là thành viên của Workspace này không
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(workspace, user);
-        if (!isMember) {
-            throw new RuntimeException("Bạn không có quyền tạo Board trong Workspace này!");
-        }
+        permissionService.checkWorkspaceMember(workspace, user);
 
         Board board = Board.builder()
                 .workspace(workspace)
@@ -57,6 +54,14 @@ public class BoardService {
         KanbanList done = KanbanList.builder().board(board).title("Done").position(196608.0).build();
 
         kanbanListRepository.saveAll(List.of(todo, inProgress, done));
+
+        // Người tạo bảng sẽ là ADMIN của bảng đó
+        com.kanban.backend.entity.BoardMember boardMember = com.kanban.backend.entity.BoardMember.builder()
+                .board(board)
+                .user(user)
+                .role("ADMIN")
+                .build();
+        boardMemberRepository.save(boardMember);
 
         return new BoardResponse(
                 board.getId(),
@@ -74,10 +79,7 @@ public class BoardService {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new RuntimeException("Board not found"));
 
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(board.getWorkspace(), user);
-        if (!isMember) {
-            throw new RuntimeException("Bạn không có quyền xem Board này!");
-        }
+        permissionService.checkBoardViewerOrAbove(board, user);
 
         return new BoardResponse(board.getId(), board.getWorkspace().getId(), board.getName(), board.getCreatedAt());
     }
@@ -90,11 +92,7 @@ public class BoardService {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new RuntimeException("Workspace not found"));
 
-        // Phải là thành viên mới được xem danh sách Board
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(workspace, user);
-        if (!isMember) {
-            throw new RuntimeException("Bạn không có quyền xem các Board trong Workspace này!");
-        }
+        permissionService.checkWorkspaceMember(workspace, user);
 
         List<Board> boards = boardRepository.findByWorkspace(workspace);
 
@@ -115,13 +113,7 @@ public class BoardService {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new RuntimeException("Board not found"));
 
-        // Kiểm tra quyền xóa: Phải là Admin của Workspace
-        com.kanban.backend.entity.WorkspaceMember member = workspaceMemberRepository.findByWorkspaceAndUser(board.getWorkspace(), user)
-                .orElseThrow(() -> new RuntimeException("You are not a member of this workspace"));
-
-        if (!"ROLE_ADMIN".equals(member.getRole())) {
-            throw new RuntimeException("Only ADMIN can delete boards in this workspace");
-        }
+        permissionService.checkBoardAdmin(board, user);
 
         boardRepository.delete(board);
     }
@@ -132,9 +124,20 @@ public class BoardService {
                 .orElseThrow(() -> new RuntimeException("Board not found"));
         
         List<com.kanban.backend.entity.WorkspaceMember> members = workspaceMemberRepository.findByWorkspace(board.getWorkspace());
-        return members.stream().map(m -> new com.kanban.backend.dto.response.BoardMemberResponse(
-                m.getId(), m.getUser().getId(), m.getUser().getFullName(), m.getUser().getEmail(), m.getRole(), m.getUser().getAvatarUrl()
-        )).collect(Collectors.toList());
+        return members.stream().map(m -> {
+            String finalRole = "MEMBER";
+            if ("ROLE_ADMIN".equals(m.getRole())) {
+                finalRole = "ADMIN";
+            } else {
+                java.util.Optional<com.kanban.backend.entity.BoardMember> bmOpt = boardMemberRepository.findByBoardAndUser(board, m.getUser());
+                if (bmOpt.isPresent()) {
+                    finalRole = bmOpt.get().getRole();
+                }
+            }
+            return new com.kanban.backend.dto.response.BoardMemberResponse(
+                    m.getId(), m.getUser().getId(), m.getUser().getFullName(), m.getUser().getEmail(), finalRole, m.getUser().getAvatarUrl()
+            );
+        }).collect(Collectors.toList());
     }
 
     // 5. THÊM THÀNH VIÊN VÀO BOARD
@@ -174,11 +177,51 @@ public class BoardService {
                 .orElseThrow(() -> new RuntimeException("Board not found"));
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        permissionService.checkWorkspaceAdmin(board.getWorkspace(), user);
 
         com.kanban.backend.entity.WorkspaceMember member = workspaceMemberRepository.findByWorkspaceAndUser(board.getWorkspace(), targetUser)
                 .orElseThrow(() -> new RuntimeException("Member not found in workspace"));
 
         workspaceMemberRepository.delete(member);
+        
+        // Also remove from board members if exists
+        boardMemberRepository.findByBoardAndUser(board, targetUser)
+                .ifPresent(boardMemberRepository::delete);
+    }
+
+    // 6.5. CẬP NHẬT QUYỀN TRÊN BOARD
+    @Transactional
+    public void updateBoardMemberRole(Long boardId, Long userId, String newRole, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new RuntimeException("Board not found"));
+        
+        permissionService.checkBoardAdmin(board, user);
+
+        User targetUser = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        com.kanban.backend.entity.WorkspaceMember targetWsMember = workspaceMemberRepository.findByWorkspaceAndUser(board.getWorkspace(), targetUser)
+                .orElseThrow(() -> new RuntimeException("Target user is not in workspace"));
+        if ("ROLE_ADMIN".equals(targetWsMember.getRole())) {
+            throw new RuntimeException("Không thể thay đổi quyền của Quản trị viên Không gian làm việc.");
+        }
+
+        com.kanban.backend.entity.BoardMember boardMember = boardMemberRepository.findByBoardAndUser(board, targetUser).orElse(null);
+        if (boardMember == null) {
+            boardMember = com.kanban.backend.entity.BoardMember.builder()
+                    .board(board)
+                    .user(targetUser)
+                    .role(newRole)
+                    .build();
+        } else {
+            boardMember.setRole(newRole);
+        }
+        boardMemberRepository.save(boardMember);
     }
 
     // 7. GỬI EMAIL MỜI THÀNH VIÊN VÀO WORKSPACE (qua Board)
@@ -192,10 +235,7 @@ public class BoardService {
         User user = userRepository.findByEmailNormalized(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(board.getWorkspace(), user);
-        if (!isMember) {
-            throw new RuntimeException("You are not a member of this workspace");
-        }
+        permissionService.checkWorkspaceAdmin(board.getWorkspace(), user);
 
         return invitationService.sendInvitation(board.getWorkspace().getId(), request, userEmail);
     }

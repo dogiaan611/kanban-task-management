@@ -44,4 +44,8 @@ public class Board {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    public Boolean getIsPrivate() {
+        return this.isPrivate != null && this.isPrivate;
+    }
 }

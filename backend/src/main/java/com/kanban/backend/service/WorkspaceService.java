@@ -22,6 +22,7 @@ public class WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
+    private final PermissionService permissionService;
 
     // 1. TẠO WORKSPACE
     @Transactional
@@ -85,14 +86,7 @@ public class WorkspaceService {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new RuntimeException("Workspace not found"));
 
-        // Kiểm tra xem User này có ở trong Workspace này không
-        WorkspaceMember member = workspaceMemberRepository.findByWorkspaceAndUser(workspace, user)
-                .orElseThrow(() -> new RuntimeException("You are not a member of this workspace"));
-
-        // Nếu không phải ADMIN thì cấm không cho xóa
-        if (!"ROLE_ADMIN".equals(member.getRole())) {
-            throw new RuntimeException("Only ADMIN can delete this workspace");
-        }
+        permissionService.checkWorkspaceAdmin(workspace, user);
 
         // Xóa tất cả các members trước để tránh lỗi khóa ngoại (Foreign Key Constraint)
         workspaceMemberRepository.deleteByWorkspace(workspace);

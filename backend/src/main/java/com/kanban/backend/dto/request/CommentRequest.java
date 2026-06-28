@@ -7,4 +7,6 @@ import lombok.Setter;
 public class CommentRequest {
     @NotBlank
     private String content;
+
+    private java.util.List<Long> mentionedUserIds;
 }

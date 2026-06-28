@@ -24,19 +24,18 @@ public class CardService {
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
     private final ActivityService activityService;
+    private final NotificationService notificationService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final PermissionService permissionService;
+    private final ChecklistService checklistService;
 
     private void notifyBoardUpdate(Long boardId) {
         messagingTemplate.convertAndSend("/topic/board/" + boardId, "{\"action\":\"BOARD_UPDATED\"}");
     }
 
-    private void checkAccess(Board board, String userEmail) {
-        User user = userRepository.findByEmail(userEmail)
+    private User getUser(String email) {
+        return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(board.getWorkspace(), user);
-        if (!isMember) {
-            throw new RuntimeException("You do not have access to this board.");
-        }
     }
 
     @Transactional
@@ -44,11 +43,8 @@ public class CardService {
         KanbanList list = listRepository.findById(request.getListId())
                 .orElseThrow(() -> new RuntimeException("List not found"));
         
-        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new RuntimeException("User not found"));
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(list.getBoard().getWorkspace(), user);
-        if (!isMember) {
-            throw new RuntimeException("You do not have access to this board.");
-        }
+        User user = getUser(userEmail);
+        permissionService.checkBoardMemberOrAdmin(list.getBoard(), user);
 
         Double maxPosition = cardRepository.findTopByListOrderByPositionDesc(list)
                 .map(Card::getPosition)
@@ -86,8 +82,8 @@ public class CardService {
     public void updateCardPosition(Long cardId, UpdatePositionRequest request, String userEmail) {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new RuntimeException("Card not found"));
-        
-        checkAccess(card.getList().getBoard(), userEmail);
+        User user = userRepository.findByEmail(userEmail).orElseThrow();
+        permissionService.checkBoardMemberOrAdmin(card.getList().getBoard(), user);
 
         boolean isListChanged = request.getParentId() != null && !card.getList().getId().equals(request.getParentId());
 
@@ -95,16 +91,22 @@ public class CardService {
         if (isListChanged) {
             KanbanList newList = listRepository.findById(request.getParentId())
                     .orElseThrow(() -> new RuntimeException("Destination list not found"));
-            checkAccess(newList.getBoard(), userEmail);
+            permissionService.checkBoardMemberOrAdmin(newList.getBoard(), user);
             card.setList(newList);
+            
+            // Automation: Check if moved to Done list
+            String lowerTitle = newList.getTitle().toLowerCase();
+            if (lowerTitle.contains("done") || lowerTitle.contains("hoàn thành")) {
+                checklistService.markAllComplete(card, user);
+            }
         }
 
         card.setPosition(request.getPosition());
         cardRepository.save(card);
         
-        User user = userRepository.findByEmail(userEmail).orElseThrow();
         if (isListChanged) {
             activityService.logActivity(card, user, "moved this card to", card.getList().getTitle());
+            notificationService.notifyCardActivity(card, user, "moved card", "to list " + card.getList().getTitle());
         }
         
         notifyBoardUpdate(card.getList().getBoard().getId());
@@ -115,7 +117,10 @@ public class CardService {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new RuntimeException("Card not found"));
         
-        checkAccess(card.getList().getBoard(), userEmail);
+        User user = userRepository.findByEmail(userEmail).orElseThrow();
+        permissionService.checkBoardMemberOrAdmin(card.getList().getBoard(), user);
+
+
 
         if (request.getTitle() != null && !request.getTitle().trim().isEmpty()) {
             card.setTitle(request.getTitle().trim());
@@ -125,6 +130,7 @@ public class CardService {
         }
         if (request.getDueDate() != null) {
             card.setDueDate(request.getDueDate());
+            notificationService.notifyCardActivity(card, user, "updated due date", request.getDueDate().toString());
         }
         if (request.getAssigneeId() != null) {
             if (request.getAssigneeId() == -1) {
@@ -133,12 +139,12 @@ public class CardService {
                 User assignee = userRepository.findById(request.getAssigneeId())
                         .orElseThrow(() -> new RuntimeException("Assignee not found"));
                 card.setAssignee(assignee);
+                notificationService.notifyCardActivity(card, user, "assigned card to", assignee.getFullName());
             }
         }
 
         card = cardRepository.save(card);
         
-        User user = userRepository.findByEmail(userEmail).orElseThrow();
         activityService.logActivity(card, user, "updated card details", null);
         
         notifyBoardUpdate(card.getList().getBoard().getId());
@@ -163,7 +169,8 @@ public class CardService {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new RuntimeException("Card not found"));
 
-        checkAccess(card.getList().getBoard(), userEmail);
+        User user = getUser(userEmail);
+        permissionService.checkBoardAdmin(card.getList().getBoard(), user);
         Long boardId = card.getList().getBoard().getId();
 
         cardRepository.delete(card);
