@@ -103,4 +103,17 @@ public class BoardController {
             return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         }
     }
+
+    // 7. API Gửi email mời thành viên
+    @PostMapping("/{id}/invitations")
+    public ResponseEntity<?> inviteBoardMember(
+            @PathVariable Long id,
+            @Valid @RequestBody com.kanban.backend.dto.request.InviteMemberRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            return ResponseEntity.ok(boardService.inviteBoardMember(id, request, userDetails.getUsername()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
 }

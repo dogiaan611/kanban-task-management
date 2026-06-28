@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { apiClient } from '../api/axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
@@ -10,6 +10,8 @@ export default function Login() {
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const redirectTo = searchParams.get('redirect') || '/dashboard';
 
     const onSubmit = async (data: any) => {
         setIsLoading(true);
@@ -18,7 +20,7 @@ export default function Login() {
             const response = await apiClient.post('/auth/login', data);
             localStorage.setItem('token', response.data.token);
             localStorage.setItem('user', JSON.stringify(response.data));
-            navigate('/dashboard');
+            navigate(redirectTo);
         } catch (error: any) {
             setErrorMessage(error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại!');
         } finally {

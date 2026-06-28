@@ -1,0 +1,8 @@
+# Copy thanh application-local.properties va dien Gmail cua ban
+
+spring.profiles.active=gmail
+
+GMAIL_USERNAME=your.email@gmail.com
+GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx
+
+app.frontend-url=http://localhost:5173

@@ -63,6 +63,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Không dùng session (vì dùng Token)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll() // Cho phép tất cả truy cập API đăng ký, đăng nhập
+                        .requestMatchers("/api/invitations/*").permitAll() // Xem thông tin lời mời (không cần đăng nhập)
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Cho phép xem document API
                         .requestMatchers("/error").permitAll() // Cho phép /error để trả về mã lỗi thực sự (thay vì 401)
                         .requestMatchers("/ws/**").permitAll() // Cho phép kết nối WebSocket handshake

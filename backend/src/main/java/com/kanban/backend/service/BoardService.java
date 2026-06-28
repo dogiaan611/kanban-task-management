@@ -28,6 +28,7 @@ public class BoardService {
     private final UserRepository userRepository;
     private final KanbanListRepository kanbanListRepository;
     private final com.kanban.backend.repository.BoardMemberRepository boardMemberRepository;
+    private final InvitationService invitationService;
 
     // 1. TẠO BOARD MỚI TRONG WORKSPACE
     @Transactional
@@ -178,5 +179,24 @@ public class BoardService {
                 .orElseThrow(() -> new RuntimeException("Member not found in workspace"));
 
         workspaceMemberRepository.delete(member);
+    }
+
+    // 7. GỬI EMAIL MỜI THÀNH VIÊN VÀO WORKSPACE (qua Board)
+    public com.kanban.backend.dto.response.InvitationResponse inviteBoardMember(
+            Long boardId,
+            com.kanban.backend.dto.request.InviteMemberRequest request,
+            String userEmail) {
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new RuntimeException("Board not found"));
+
+        User user = userRepository.findByEmailNormalized(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        boolean isMember = workspaceMemberRepository.existsByWorkspaceAndUser(board.getWorkspace(), user);
+        if (!isMember) {
+            throw new RuntimeException("You are not a member of this workspace");
+        }
+
+        return invitationService.sendInvitation(board.getWorkspace().getId(), request, userEmail);
     }
 }

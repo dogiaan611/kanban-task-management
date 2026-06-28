@@ -9,6 +9,7 @@ import Home from './pages/Home'
 import BoardDetail from './pages/BoardDetail'
 import DashboardOverview from './pages/DashboardOverview'
 import Profile from './pages/Profile'
+import AcceptInvite from './pages/AcceptInvite'
 
 const App = () => {
     return (
@@ -16,6 +17,7 @@ const App = () => {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/invite/:token" element={<AcceptInvite />} />
 
             {/* Các trang yêu cầu đăng nhập sẽ nằm trong DashboardLayout */}
             <Route element={<DashboardLayout />}>

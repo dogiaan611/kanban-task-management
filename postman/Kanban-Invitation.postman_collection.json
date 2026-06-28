@@ -1,0 +1,253 @@
+{
+  "info": {
+    "name": "Kanban - Email Invitation",
+    "description": "Test flow mời thành viên qua email.\n\nChuẩn bị:\n1. docker compose up -d\n2. docker compose up -d mailhog (hoặc app.mail.enabled=false)\n3. Backend chạy port 8080\n\nChạy folder theo thứ tự từ trên xuống.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Login Admin (người mời)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.environment.set('tokenAdmin', json.token);",
+                  "console.log('tokenAdmin saved');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Login Invitee (Dung - người được mời)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.environment.set('tokenInvitee', json.token);",
+                  "console.log('tokenInvitee saved');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{inviteeEmail}}\",\n  \"password\": \"{{inviteePassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Register Invitee (chạy 1 lần nếu chưa có tài khoản)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Dung User\",\n  \"email\": \"{{inviteeEmail}}\",\n  \"password\": \"{{inviteePassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Workspace & Board",
+      "item": [
+        {
+          "name": "Get Workspaces",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "if (list.length > 0) {",
+                  "  pm.environment.set('workspaceId', list[0].id);",
+                  "  console.log('workspaceId =', list[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tokenAdmin}}", "type": "string" }] },
+            "method": "GET",
+            "url": "{{baseUrl}}/workspaces"
+          }
+        },
+        {
+          "name": "Get Boards by Workspace",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "if (list.length > 0) {",
+                  "  pm.environment.set('boardId', list[0].id);",
+                  "  console.log('boardId =', list[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tokenAdmin}}", "type": "string" }] },
+            "method": "GET",
+            "url": "{{baseUrl}}/boards/workspace/{{workspaceId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Invitation Flow",
+      "item": [
+        {
+          "name": "Send Invitation (Board)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.environment.set('inviteToken', json.token);",
+                  "console.log('inviteToken =', json.token);",
+                  "console.log('Invite link: http://localhost:5173/invite/' + json.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tokenAdmin}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{inviteeEmail}}\"\n}"
+            },
+            "url": "{{baseUrl}}/boards/{{boardId}}/invitations"
+          }
+        },
+        {
+          "name": "Send Invitation (Workspace)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.environment.set('inviteToken', json.token);",
+                  "console.log('inviteToken =', json.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tokenAdmin}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{inviteeEmail}}\"\n}"
+            },
+            "url": "{{baseUrl}}/workspaces/{{workspaceId}}/invitations"
+          }
+        },
+        {
+          "name": "Get Invitation Info (public)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/invitations/{{inviteToken}}"
+          }
+        },
+        {
+          "name": "Accept Invitation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "console.log('Joined workspace:', json.name, 'id=', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tokenInvitee}}", "type": "string" }] },
+            "method": "POST",
+            "url": "{{baseUrl}}/invitations/{{inviteToken}}/accept"
+          }
+        },
+        {
+          "name": "Get Board Members (verify)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tokenAdmin}}", "type": "string" }] },
+            "method": "GET",
+            "url": "{{baseUrl}}/boards/{{boardId}}/members"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Error Cases",
+      "item": [
+        {
+          "name": "Invite email chưa đăng ký (expect 400)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tokenAdmin}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"notregistered@gmail.com\"\n}"
+            },
+            "url": "{{baseUrl}}/boards/{{boardId}}/invitations"
+          }
+        },
+        {
+          "name": "Accept bằng sai tài khoản (expect 400)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{tokenAdmin}}", "type": "string" }] },
+            "method": "POST",
+            "url": "{{baseUrl}}/invitations/{{inviteToken}}/accept"
+          }
+        }
+      ]
+    }
+  ]
+}

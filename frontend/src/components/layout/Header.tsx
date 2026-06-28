@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Search, UserCircle, ArrowLeft } from 'lucide-react';
+import { Search, UserCircle, ArrowLeft } from 'lucide-react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import BoardMembersBar from '../kanban/BoardMembersBar';
+import NotificationBell from './NotificationBell';
 
 const Header = () => {
     const navigate = useNavigate();
@@ -99,10 +100,7 @@ const Header = () => {
             {/* Right Actions */}
             <div className="flex-1 flex items-center justify-end space-x-6">
                 {boardId && <BoardMembersBar boardId={boardId} />}
-                <button className="relative p-2 text-slate-400 hover:text-emerald-600 transition-colors">
-                    <Bell className="w-6 h-6" />
-                    <span className="absolute top-1.5 right-2 w-2.5 h-2.5 bg-rose-500 border-2 border-white rounded-full"></span>
-                </button>
+                <NotificationBell />
                 <div 
                     className="flex items-center space-x-3 cursor-pointer group"
                     onClick={() => navigate('/profile')}

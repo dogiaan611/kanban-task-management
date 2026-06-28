@@ -3,10 +3,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserPlus, X, Trash2, Crown } from 'lucide-react';
 import {
     getBoardMembers,
-    addBoardMember,
     removeBoardMember,
     type BoardMember
 } from '../../api/boardService';
+import { inviteBoardMember } from '../../api/invitationService';
+
+const extractErrorMessage = (err: any, fallback: string) =>
+    err?.response?.data?.message
+    || err?.response?.data?.error
+    || (err?.response?.status === 500 ? 'Lỗi server. Kiểm tra backend đã chạy migration V12 và MailHog.' : null)
+    || fallback;
 
 interface BoardMembersBarProps {
     boardId: number;
@@ -40,6 +46,8 @@ const BoardMembersBar: React.FC<BoardMembersBarProps> = ({ boardId }) => {
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [inviteEmail, setInviteEmail] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
+    const [inviteLink, setInviteLink] = useState('');
     const popoverRef = useRef<HTMLDivElement>(null);
 
     const { data: members = [] } = useQuery<BoardMember[]>({
@@ -48,16 +56,18 @@ const BoardMembersBar: React.FC<BoardMembersBarProps> = ({ boardId }) => {
         enabled: !!boardId
     });
 
-    const addMutation = useMutation({
-        mutationFn: (email: string) => addBoardMember(boardId, email),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['boardMembers', boardId] });
+    const inviteMutation = useMutation({
+        mutationFn: (email: string) => inviteBoardMember(boardId, email),
+        onSuccess: (data) => {
             setInviteEmail('');
             setErrorMsg('');
+            setInviteLink(data.inviteLink);
+            setSuccessMsg(`Đã gửi lời mời tới ${data.email}. Kiểm tra Gmail hoặc thông báo trong app.`);
         },
         onError: (err: any) => {
-            const msg = err?.response?.data?.message || 'Không tìm thấy user hoặc đã là thành viên.';
-            setErrorMsg(msg);
+            setSuccessMsg('');
+            setInviteLink('');
+            setErrorMsg(extractErrorMessage(err, 'Không thể gửi lời mời. Vui lòng thử lại.'));
         }
     });
 
@@ -83,7 +93,9 @@ const BoardMembersBar: React.FC<BoardMembersBarProps> = ({ boardId }) => {
         e.preventDefault();
         if (!inviteEmail.trim()) return;
         setErrorMsg('');
-        addMutation.mutate(inviteEmail.trim());
+        setSuccessMsg('');
+        setInviteLink('');
+        inviteMutation.mutate(inviteEmail.trim());
     };
 
     const MAX_VISIBLE = 4;
@@ -183,28 +195,51 @@ const BoardMembersBar: React.FC<BoardMembersBarProps> = ({ boardId }) => {
                     {/* Invite Form */}
                     <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
                         <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Invite by email</p>
+                        <p className="text-xs text-slate-400 mb-2">Chỉ mời email đã đăng ký tài khoản Kanban.</p>
                         <form onSubmit={handleInvite} className="flex space-x-2">
                             <input
                                 type="email"
                                 value={inviteEmail}
-                                onChange={(e) => { setInviteEmail(e.target.value); setErrorMsg(''); }}
+                                onChange={(e) => { setInviteEmail(e.target.value); setErrorMsg(''); setSuccessMsg(''); }}
                                 placeholder="name@example.com"
                                 className="flex-1 px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                                 autoFocus
                             />
                             <button
                                 type="submit"
-                                disabled={addMutation.isPending}
+                                disabled={inviteMutation.isPending}
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 whitespace-nowrap"
                             >
-                                {addMutation.isPending ? '...' : 'Invite'}
+                                {inviteMutation.isPending ? '...' : 'Invite'}
                             </button>
                         </form>
                         {errorMsg && (
                             <p className="text-rose-500 text-xs mt-2">{errorMsg}</p>
                         )}
-                        {addMutation.isSuccess && !errorMsg && (
-                            <p className="text-emerald-600 text-xs mt-2 font-medium">✓ Thành viên đã được thêm!</p>
+                        {successMsg && (
+                            <div className="mt-2 space-y-2">
+                                <p className="text-emerald-600 text-xs font-medium">✓ {successMsg}</p>
+                                {inviteLink && (
+                                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2">
+                                        <p className="text-xs text-slate-500 mb-1">Link chấp nhận lời mời:</p>
+                                        <a
+                                            href={inviteLink}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-xs text-emerald-700 break-all hover:underline"
+                                        >
+                                            {inviteLink}
+                                        </a>
+                                        <button
+                                            type="button"
+                                            onClick={() => navigator.clipboard.writeText(inviteLink)}
+                                            className="mt-1 text-xs text-emerald-600 hover:text-emerald-800 font-semibold"
+                                        >
+                                            Copy link
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>

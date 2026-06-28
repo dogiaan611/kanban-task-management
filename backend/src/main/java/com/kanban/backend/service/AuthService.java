@@ -69,15 +69,15 @@ public class AuthService {
     // --- XỬ LÝ ĐĂNG KÝ ---
     @Transactional
     public void registerUser(RegisterRequest signUpRequest) {
-        // Kiểm tra xem email đã có người xài chưa
-        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+        String email = signUpRequest.getEmail().trim();
+
+        if (userRepository.existsByEmailNormalized(email)) {
             throw new RuntimeException("Error: Email is already in use!");
         }
 
-        // Tạo tài khoản mới, mã hóa mật khẩu trước khi lưu
         User user = User.builder()
-                .fullName(signUpRequest.getFullName())
-                .email(signUpRequest.getEmail())
+                .fullName(signUpRequest.getFullName().trim())
+                .email(email)
                 .password(passwordEncoder.encode(signUpRequest.getPassword()))
                 .build();
 

@@ -128,9 +128,9 @@
 - `[ ]` Tối ưu Responsive (Giao diện Board khi cuộn ngang, Mobile/Tablet)
 
 ### 15. Gửi Email Mời Thành Viên (Flow Có Token Xác Nhận)
-- `[ ]` Cấu hình JavaMailSender ở Backend để gửi thư
-- `[ ]` Migration: Tạo bảng workspace_invitations chứa mã Token xác nhận
-- `[ ]` Backend: Viết API tạo mã Token gửi Email & API xác thực Token để Add vào Workspace
-- `[ ]` Frontend: Dựng trang Xác nhận Lời mời (Accept Invite Page) cho người dùng click từ Email
+- `[x]` Cấu hình JavaMailSender ở Backend để gửi thư
+- `[x]` Migration: Tạo bảng workspace_invitations chứa mã Token xác nhận
+- `[x]` Backend: Viết API tạo mã Token gửi Email & API xác thực Token để Add vào Workspace
+- `[x]` Frontend: Dựng trang Xác nhận Lời mời (Accept Invite Page) cho người dùng click từ Email
 - `[ ]` Viết file README.md hướng dẫn cài đặt và chạy dự án
 - `[ ]` Hoàn thiện Swagger API Docs và rà soát tổng thể

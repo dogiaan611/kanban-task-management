@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { apiClient } from '../api/axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 
 export default function Register() {
-    const { register, handleSubmit, formState: { errors } } = useForm();
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const prefilledEmail = searchParams.get('email') || '';
+    const redirectTo = searchParams.get('redirect') || '';
+
+    const { register, handleSubmit, formState: { errors } } = useForm({
+        defaultValues: { email: prefilledEmail }
+    });
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const navigate = useNavigate();
 
     const onSubmit = async (data: any) => {
         setIsLoading(true);
@@ -24,7 +30,10 @@ export default function Register() {
 
             // Đợi 2 giây để người dùng đọc thông báo rồi tự chuyển sang trang login
             setTimeout(() => {
-                navigate('/login');
+                const loginUrl = redirectTo
+                    ? `/login?redirect=${encodeURIComponent(redirectTo)}`
+                    : '/login';
+                navigate(loginUrl);
             }, 2000);
 
         } catch (error: any) {
