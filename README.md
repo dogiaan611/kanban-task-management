@@ -1,102 +1,102 @@
-# 🚀 PM-KANBAN: Fullstack Project Management App
+# 📋 PM-KABAN (Kanban Board Management)
 
-Chào mừng các bạn đã tham gia vào dự án PM-KANBAN! Đây là một ứng dụng quản lý dự án lấy cảm hứng từ Trello/Jira, được xây dựng với kiến trúc Fullstack hiện đại.
+PM-KABAN là một ứng dụng quản lý công việc (Kanban Board) Fullstack mạnh mẽ, lấy cảm hứng từ Trello, được xây dựng với mục tiêu quản lý dự án, tổ chức công việc trực quan và làm việc nhóm thời gian thực (real-time).
 
-Tài liệu này đóng vai trò là **"Sách hướng dẫn nhập môn" (Onboarding Guide)**. Mọi thành viên trong team **BẮT BUỘC** phải đọc kỹ tài liệu này trước khi bắt đầu code để hiểu rõ luồng nghiệp vụ (Flow), kiến trúc và các quy định chung, tránh làm sai lệch định hướng ban đầu.
+## 🚀 Công nghệ sử dụng
 
----
+### 🖥️ Frontend
+- **React.js (Vite)** + TypeScript
+- **TailwindCSS** (Giao diện người dùng)
+- **React Query** (Quản lý trạng thái server)
+- **React Router** (Điều hướng trang)
+- **@hello-pangea/dnd** (Kéo thả thẻ công việc mượt mà)
+- **Recharts** (Vẽ biểu đồ thống kê)
+- **SockJS & STOMP** (Giao tiếp WebSocket Real-time)
 
-## 🛠 Tech Stack (Công nghệ sử dụng)
+### ⚙️ Backend
+- **Spring Boot 3** (Java 17)
+- **Spring Security + JWT** (Xác thực và Phân quyền RBAC)
+- **Spring Data JPA** (Hibernate)
+- **Spring WebSocket** (Thông báo và cập nhật Real-time)
+- **Spring Boot Starter Mail** (Gửi Email mời thành viên)
+- **Flyway** (Quản lý phiên bản cơ sở dữ liệu)
+- **Swagger / OpenAPI** (Tài liệu API)
+- **JUnit 5 & Mockito** (Kiểm thử Unit Test)
 
-*   **Backend:** Java 17, Spring Boot 3, Spring Security, Spring Data JPA.
-*   **Frontend:** React (Vite), TypeScript, TailwindCSS, React Query, React Router.
-*   **Database:** PostgreSQL (Quản lý schema bằng Flyway).
-*   **Infrastructure:** Docker & Docker Compose (cho Database).
-
----
-
-## 🏗 Kiến trúc & Luồng nghiệp vụ (Core Flows)
-
-Dự án được chia làm 2 cấp quản lý chính: **Workspace (Tổ chức/Công ty)** và **Board (Dự án)**.
-
-### 1. Kiến trúc Database (ERD Concept)
-*   `users`: Lưu thông tin tài khoản đăng nhập.
-*   `workspaces`: Không gian làm việc chung (ví dụ: Công ty A, Nhóm B).
-*   `workspace_members`: Bảng trung gian xác định User nào thuộc Workspace nào.
-*   `boards`: Các bảng dự án nằm trong 1 Workspace.
-*   `lists`: Các cột trạng thái trong 1 Board (vd: To Do, In Progress, Done).
-*   `cards`: Các thẻ công việc nằm trong 1 List.
-
-### 2. Luồng Xác thực (Authentication Flow)
-*   Sử dụng **JWT (JSON Web Token)**.
-*   Khi đăng nhập thành công, Backend trả về `accessToken` và `refreshToken`.
-*   Frontend lưu token vào `localStorage` (hoặc cookie) và tự động đính kèm `Bearer {token}` vào Header của các request gửi lên Backend thông qua Axios Interceptor.
-
-### 3. Luồng Kéo Thả (Drag & Drop Flow) - RẤT QUAN TRỌNG
-Tính năng lõi của app là kéo thả thẻ (Card) và cột (List). Để tránh việc phải update lại toàn bộ thứ tự của các thẻ trong Database mỗi khi kéo thả, chúng ta áp dụng thuật toán tính toán vị trí bằng số thực (tương tự logic LexoRank của Jira).
-*   Mỗi Card/List có một trường `position` (kiểu số double/float).
-*   Khi kéo một Card vào giữa 2 Card khác, `position` mới của nó = `(position_trên + position_dưới) / 2`.
-*   Frontend sử dụng `@hello-pangea/dnd`. Khi kéo thả xong, Frontend sẽ thực hiện **Optimistic Update** (cập nhật UI ngay lập tức cho mượt) rồi mới gọi API ngầm xuống Backend để lưu `position` mới.
+### 🗄️ Database & DevOps
+- **PostgreSQL** (Hệ quản trị cơ sở dữ liệu chính)
+- **Docker & Docker Compose** (Môi trường chạy Database)
 
 ---
 
-## 📁 Cấu trúc thư mục
+## 🌟 Tính năng nổi bật
 
-### Backend (`/backend`)
-Áp dụng mô hình chuẩn MVC + Layered Architecture:
-*   `controller/`: Nơi định nghĩa các API Endpoints (RESTful).
-*   `service/`: Chứa toàn bộ logic nghiệp vụ (Business logic). **Tuyệt đối không viết logic xử lý dữ liệu trong Controller**.
-*   `repository/`: Tương tác với Database (Spring Data JPA).
-*   `entity/`: Định nghĩa các Table trong Database.
-*   `dto/`: Data Transfer Objects (Request/Response payload). Bắt buộc dùng DTO để hứng request và trả response, không trả trực tiếp Entity ra ngoài API.
-*   `resources/db/migration/`: Chứa các file SQL của Flyway để tạo bảng. Không sửa trực tiếp Database bằng tay, mọi thay đổi DB phải tạo file migration mới (VD: `V6__add_board_members.sql`).
-
-### Frontend (`/frontend`)
-*   `api/`: Các hàm Axios gọi API tới Backend, chia theo từng service (vd: `authService.ts`, `kanbanService.ts`).
-*   `components/`: Các UI component độc lập.
-*   `pages/`: Các màn hình chính của ứng dụng (Login, Dashboard, BoardDetail).
-*   `layouts/`: Khung giao diện (Sidebar, Header).
+- **Tổ chức Đa Tầng:** Quản lý theo cấu trúc `Workspace` -> `Board` -> `List` -> `Card`.
+- **Kéo Thả Trực Quan (Drag & Drop):** Hỗ trợ kéo thả Thẻ (Card) qua lại giữa các Cột (List).
+- **Cập Nhật Theo Thời Gian Thực (Real-time):** Mọi thao tác kéo thả, bình luận, thay đổi nội dung đều được đồng bộ tức thì đến tất cả thành viên trong Board thông qua WebSockets.
+- **Tự Động Hóa (Automation):** Kéo thẻ vào cột "Done" sẽ tự động đánh dấu hoàn tất toàn bộ danh sách việc cần làm (Checklist).
+- **Phân Quyền Chi Tiết (RBAC):** Quyền `ADMIN`, `MEMBER`, `VIEWER`. Viewer chỉ có thể xem, không thể kéo thả hay chỉnh sửa.
+- **Tính Năng Thẻ Mở Rộng:** Hỗ trợ Thẻ (Tags), Hạn chót (Due Date), Bình luận (Mentions), File đính kèm, Danh sách công việc con (Checklist).
+- **Lời Mời Thành Viên (Invitations):** Mời người khác vào Workspace thông qua Email với link chứa Token xác thực.
+- **Biểu Đồ Thống Kê (Dashboard):** Biểu đồ hiển thị khối lượng công việc, tỷ lệ hoàn thành.
+- **Chế Độ Xem Lịch (Calendar View):** Theo dõi các công việc theo Hạn chót trên giao diện Lịch tháng.
 
 ---
 
-## 🚀 Hướng dẫn cài đặt & Chạy dự án (Local Development)
+## 🛠️ Hướng dẫn Cài đặt & Chạy dự án
 
-### Bước 1: Khởi động Database
-Yêu cầu máy phải cài đặt **Docker**. Mở Terminal tại thư mục gốc của dự án:
+### Yêu cầu hệ thống:
+- Java 17+
+- Node.js 18+
+- Docker & Docker Compose
+- Maven (Tùy chọn, dự án đã có sẵn Maven Wrapper)
+
+### Bước 1: Khởi động Database (PostgreSQL)
+Mở terminal tại thư mục gốc của dự án và chạy lệnh sau để khởi động container PostgreSQL:
 ```bash
 docker-compose up -d
 ```
-Lệnh này sẽ dựng một container PostgreSQL ở cổng `5432`.
+Hệ thống sẽ chạy ở `localhost:5432` với user: `postgres`, password: `postgres`.
 
-### Bước 2: Chạy Backend
-Mở thư mục `backend` bằng IntelliJ IDEA (hoặc IDE Java bạn dùng).
-Chạy file `BackendApplication.java`.
-Backend sẽ chạy ở cổng `http://localhost:8080`.
-*(Lưu ý: Flyway sẽ tự động chạy các script SQL để tạo bảng khi ứng dụng khởi động).*
+### Bước 2: Chạy Backend (Spring Boot)
+Di chuyển vào thư mục `backend`:
+```bash
+cd backend
+```
+Nếu bạn dùng Windows:
+```bash
+.\mvnw spring-boot:run
+```
+Nếu bạn dùng Linux/Mac:
+```bash
+./mvnw spring-boot:run
+```
+Flyway sẽ tự động tạo bảng (Migration). Backend sẽ chạy ở cổng `http://localhost:8080`.
 
-### Bước 3: Chạy Frontend
-Mở Terminal, di chuyển vào thư mục `frontend`:
+### Bước 3: Chạy Frontend (React)
+Mở một terminal mới và di chuyển vào thư mục `frontend`:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Frontend sẽ chạy ở cổng `http://localhost:5173`.
+Frontend sẽ chạy ở cổng `http://localhost:5173`. Truy cập vào link này để trải nghiệm ứng dụng.
 
 ---
 
-## 📝 Định hướng phát triển & Công việc tiếp theo
+## 📚 Tài liệu API (Swagger UI)
+Sau khi Backend chạy thành công, bạn có thể truy cập tài liệu Swagger UI để xem và thử nghiệm toàn bộ các API của hệ thống (Đã được cấu hình xác thực Bearer Token):
 
-Hiện tại dự án đã hoàn thành lõi kéo thả Kanban (Tuần 1 -> Tuần 3).
-Công việc tiếp theo của Team nằm ở **Tuần 4 & Tuần 5**.
-
-👉 **Vui lòng đọc file `task.md` (nếu có lưu ở máy tính cá nhân hoặc hỏi Leader) để biết chính xác từng task cụ thể cần làm.**
-
-Một số tính năng chuẩn bị triển khai:
-1.  **Phân quyền Board:** Tạo bảng `board_members` và thuộc tính `is_private` để giới hạn người xem Board (Giống Trello).
-2.  **Card Details:** Popup hiển thị chi tiết công việc, mô tả, ngày hết hạn.
-3.  **Checklist & Comments:** Tương tác trên thẻ công việc.
-4.  **Invite qua Email:** Gửi thư mời tham gia Workspace bằng JavaMailSender kèm mã Token xác thực.
+👉 **[Truy cập Swagger UI](http://localhost:8080/swagger-ui/index.html)**
 
 ---
-*Chúc cả team làm việc hiệu quả và tuân thủ chặt chẽ kiến trúc của dự án!*
+
+## 🧪 Chạy Unit Test
+Dự án đã được trang bị bộ Unit Test cho các Service cốt lõi (`AuthService`, `BoardService`, `CardService`).
+Để chạy kiểm thử, ở thư mục `backend`, dùng lệnh:
+```bash
+.\mvnw test
+```
+
+---
+*Dự án được xây dựng với mục đích cung cấp một giải pháp quản lý công việc chuyên nghiệp và mạnh mẽ.*

@@ -100,7 +100,7 @@
 ### 13. Cập nhật Real-time (WebSockets)
 - `[x]` Cấu hình Spring WebSocket (STOMP/SockJS) ở Backend
 - `[x]` Tích hợp WebSocket client ở Frontend để cập nhật Board tức thì
-- `[ ]` Thông báo tự động (Real-time Web Notifications) khi được gán việc/nhắc tên
+- `[x]` Thông báo tự động (Real-time Web Notifications) khi được gán việc/nhắc tên
 
 ### 14. Gán Thành viên vào Thẻ (Assign Members)
 - `[x]` Cập nhật API Backend cho phép Xóa Assignee (Unassign)
@@ -113,24 +113,35 @@
 - `[x]` Frontend: Thêm tính năng chọn Assignee trong ChecklistBlock
 
 ### 15. Tính năng Nâng cao (Pro/Enterprise Features)
-- `[ ]` Phân quyền chi tiết (Role-based Access Control - RBAC):
-  - Phân quyền mức Workspace (Owner vs Member)
-  - Phân quyền mức Board (Admin, Member, Viewer)
+- `[/]` Phân quyền chi tiết (Role-based Access Control - RBAC):
+  - `[x]` Backend: Thêm các hàm kiểm tra quyền (Check Permissions) trong các Services.
+  - `[x]` Backend: Phân quyền mức Workspace (Owner vs Member) cho các API sửa/xóa/mời.
+  - `[x]` Backend: Phân quyền mức Board (Admin, Member, Viewer) cho các API bảng, danh sách, thẻ.
+  - `[x]` Backend: Cập nhật API lấy danh sách thành viên trả về Role, và thêm API đổi Role.
+  - `[x]` Frontend: Dựng UI (Dropdown) để đổi Role của thành viên trong Modal.
+  - `[x]` Frontend: Ẩn/hiện các nút Sửa/Xóa/Cài đặt dựa theo Role.
+  - `[x]` Frontend: Vô hiệu hóa tính năng Kéo thả (Drag & Drop) và Form nhập liệu đối với VIEWER.
 - `[x]` Tệp đính kèm (Attachments) vào thẻ (Backend Upload, Frontend UI)
-- `[ ]` Lọc và Tìm kiếm nâng cao trên Board
-- `[ ]` Chế độ xem Lịch (Calendar View) sử dụng dữ liệu Due Date
-- `[ ]` Nhắc tên người dùng (@Mentions) trong Comment
-- `[ ]` Tự động hóa (Automations) cho các thao tác kéo thả
-
-### 15. Kiểm thử & Tối ưu hóa
-- `[ ]` Viết Unit Test cho các API cốt lõi (JUnit/MockMvc)
-- `[ ]` Xử lý lỗi toàn cục phía Frontend (Toast Notifications)
-- `[ ]` Tối ưu Responsive (Giao diện Board khi cuộn ngang, Mobile/Tablet)
+- `[x]` Lọc và Tìm kiếm nâng cao trên Board
+- `[x]` Chế độ xem Lịch (Calendar View) sử dụng dữ liệu Due Date
+- `[x]` Nhắc tên người dùng (@Mentions) trong Comment
+- `[x]` Tự động hóa (Automations) cho các thao tác kéo thả.
+- `[x]` Viết Unit Test cho các API quan trọng.
+- `[x]` Tối ưu Responsive & UI/UX.
+- `[x]` Xử lý lỗi toàn cục, Toast Notifications.
+- `[x]` Viết README.md và Swagger API Docs.
 
 ### 15. Gửi Email Mời Thành Viên (Flow Có Token Xác Nhận)
 - `[x]` Cấu hình JavaMailSender ở Backend để gửi thư
 - `[x]` Migration: Tạo bảng workspace_invitations chứa mã Token xác nhận
 - `[x]` Backend: Viết API tạo mã Token gửi Email & API xác thực Token để Add vào Workspace
 - `[x]` Frontend: Dựng trang Xác nhận Lời mời (Accept Invite Page) cho người dùng click từ Email
-- `[ ]` Viết file README.md hướng dẫn cài đặt và chạy dự án
-- `[ ]` Hoàn thiện Swagger API Docs và rà soát tổng thể
+- `[x]` Viết file README.md hướng dẫn cài đặt và chạy dự án
+- `[x]` Hoàn thiện Swagger API Docs và rà soát tổng thể
+
+### 16. Thông báo tự động cho Thẻ (Card Activity Notifications)
+- `[x]` Cập nhật `NotificationService` thêm hàm `notifyCardActivity` gom danh sách (Assignee + Checklist Assignees + Commenters)
+- `[x]` Cập nhật `CardService` để gọi thông báo khi kéo thả thẻ và cập nhật Due Date
+- `[x]` Cập nhật `CommentService` để gọi thông báo khi có bình luận mới
+- `[x]` Cập nhật `ChecklistService` để gọi thông báo khi thêm/hoàn thành checklist item
+- `[x]` Cập nhật `AttachmentService` để gọi thông báo khi upload file đính kèm
