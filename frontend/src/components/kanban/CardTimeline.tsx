@@ -40,6 +40,119 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members }) => {
     const [isUploadingEditFile, setIsUploadingEditFile] = useState(false);
     const editFileInputRef = React.useRef<HTMLInputElement>(null);
 
+    const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+    const [mentionCursorPos, setMentionCursorPos] = useState<number | null>(null);
+    const [selectedMentions, setSelectedMentions] = useState<{id: number, name: string}[]>([]);
+    const [mentionPos, setMentionPos] = useState({ top: 40, left: 16 });
+    const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+    const editAreaRef = React.useRef<HTMLTextAreaElement>(null);
+
+    const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>, isEdit: boolean) => {
+        const val = e.target.value;
+        if (isEdit) {
+            setEditContent(val);
+        } else {
+            setNewComment(val);
+        }
+
+        // Auto-expand textarea
+        e.target.style.height = 'auto';
+        e.target.style.height = `${e.target.scrollHeight}px`;
+
+        const cursorPosition = e.target.selectionStart;
+        const textBeforeCursor = val.substring(0, cursorPosition);
+
+        // Tính toán tọa độ hiển thị popup tương đối theo con trỏ
+        const lines = textBeforeCursor.split('\n');
+        const currentLineIndex = lines.length - 1;
+        const currentLineText = lines[currentLineIndex];
+        
+        const topOffset = isEdit ? 8 : 12; // padding top
+        const lineHeight = 20; // text-sm line-height
+        const top = topOffset + (currentLineIndex + 1) * lineHeight + 4;
+        const leftOffset = isEdit ? 12 : 16; // padding left
+        const left = Math.min(leftOffset + currentLineText.length * 7, e.target.clientWidth - 260); // 7px per char approx, avoid overflow
+        
+        setMentionPos({ top, left });
+
+        const match = textBeforeCursor.match(/@(\S*)$/);
+        
+        if (match) {
+            setMentionQuery(match[1]);
+            setMentionCursorPos(cursorPosition);
+        } else {
+            setMentionQuery(null);
+            setMentionCursorPos(null);
+        }
+    };
+
+    const handleSelectMention = (user: BoardMember, isEdit: boolean) => {
+        const val = isEdit ? editContent : newComment;
+        if (mentionCursorPos === null) return;
+        
+        const textBeforeCursor = val.substring(0, mentionCursorPos);
+        const textAfterCursor = val.substring(mentionCursorPos);
+        
+        const match = textBeforeCursor.match(/@(\S*)$/);
+        if (!match) return;
+
+        const start = mentionCursorPos - match[0].length;
+        // Chèn @Tên (thay vì @[Tên](id)) để nhìn đẹp hơn
+        const newText = val.substring(0, start) + `@${user.fullName} ` + textAfterCursor;
+        
+        setSelectedMentions(prev => {
+            if (!prev.find(m => m.id === user.userId)) {
+                return [...prev, { id: user.userId, name: user.fullName }];
+            }
+            return prev;
+        });
+
+        if (isEdit) {
+            setEditContent(newText);
+            setTimeout(() => editAreaRef.current?.focus(), 0);
+        } else {
+            setNewComment(newText);
+            setTimeout(() => textareaRef.current?.focus(), 0);
+        }
+        
+        setMentionQuery(null);
+        setMentionCursorPos(null);
+    };
+
+    const renderMentionPopup = (isEdit: boolean) => {
+        if (mentionQuery === null) return null;
+        const q = mentionQuery.toLowerCase();
+        const filteredMembers = members.filter(m => (m.fullName || '').toLowerCase().includes(q));
+        if (filteredMembers.length === 0) return null;
+        
+        return (
+            <div 
+                className="absolute z-50 bg-white border border-slate-200 shadow-xl rounded-lg w-64 max-h-48 overflow-y-auto"
+                style={{ top: `${mentionPos.top}px`, left: `${mentionPos.left}px` }}
+            >
+                {filteredMembers.map(m => {
+                    const name = m.fullName || 'Unknown';
+                    return (
+                        <button 
+                            key={m.userId}
+                            onClick={() => handleSelectMention(m, isEdit)}
+                            className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-sm flex items-center space-x-2 transition-colors border-b border-slate-50 last:border-0"
+                        >
+                            {m.avatarUrl ? (
+                                <img src={m.avatarUrl} alt={name} className="w-6 h-6 rounded-full object-cover shrink-0" />
+                            ) : (
+                                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-[10px] font-bold shrink-0">
+                                    {name.charAt(0).toUpperCase()}
+                                </div>
+                            )}
+                            <span className="font-medium text-slate-700 truncate">{name}</span>
+                        </button>
+                    );
+                })}
+            </div>
+        );
+    };
+
     const { data: comments = [] } = useQuery({
         queryKey: ['comments', cardId],
         queryFn: () => commentService.getCommentsByCard(cardId)
@@ -51,11 +164,18 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members }) => {
     });
 
     const addCommentMutation = useMutation({
-        mutationFn: () => commentService.addComment(cardId, newComment),
+        mutationFn: () => {
+            // Lọc ra những ID thực sự còn nằm trong text
+            const actualMentionedIds = selectedMentions
+                .filter(m => newComment.includes(`@${m.name}`))
+                .map(m => m.id);
+            return commentService.addComment(cardId, newComment, actualMentionedIds);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['comments', cardId] });
             queryClient.invalidateQueries({ queryKey: ['activities', cardId] });
             setNewComment('');
+            setSelectedMentions([]);
         }
     });
 
@@ -71,11 +191,19 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members }) => {
     });
 
     const updateCommentMutation = useMutation({
-        mutationFn: ({ id, content }: { id: number, content: string }) => commentService.updateComment(id, content),
+        mutationFn: ({ id, content }: { id: number, content: string }) => {
+            // Nếu có mention mới khi edit, ta vẫn truyền mentionedIds
+            const actualMentionedIds = selectedMentions
+                .filter(m => content.includes(`@${m.name}`))
+                .map(m => m.id);
+            // Hiện tại API edit comment của backend chưa nhận mentionedIds, nhưng truyền vào cũng không sao
+            return commentService.updateComment(id, content);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['comments', cardId] });
             queryClient.invalidateQueries({ queryKey: ['activities', cardId] });
             setEditingCommentId(null);
+            setSelectedMentions([]);
         },
         onError: (error: any) => {
             alert(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật bình luận!');
@@ -152,7 +280,35 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members }) => {
                     </button>
                 );
             }
-            return <p key={i} className="min-h-[1.2rem] whitespace-pre-wrap">{line}</p>;
+            
+            // Tự động tìm @Tên dựa trên danh sách members
+            const mentionRegexStr = members.map(m => m.fullName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+            
+            if (!mentionRegexStr) {
+                return <p key={i} className="min-h-[1.2rem] whitespace-pre-wrap">{line}</p>;
+            }
+
+            const mentionRegex = new RegExp(`@(${mentionRegexStr})`, 'g');
+            const parts = [];
+            let lastIndex = 0;
+            let match;
+            
+            while ((match = mentionRegex.exec(line)) !== null) {
+                if (match.index > lastIndex) {
+                    parts.push(line.substring(lastIndex, match.index));
+                }
+                parts.push(
+                    <span key={`mention-${i}-${match.index}`} className="text-blue-600 font-bold bg-blue-50 px-1 rounded mx-0.5 border border-blue-100">
+                        @{match[1]}
+                    </span>
+                );
+                lastIndex = match.index + match[0].length;
+            }
+            if (lastIndex < line.length) {
+                parts.push(line.substring(lastIndex));
+            }
+
+            return <p key={i} className="min-h-[1.2rem] whitespace-pre-wrap">{parts}</p>;
         });
     };
 
@@ -216,14 +372,21 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members }) => {
                             Me
                         </div>
                     )}
-                    <div className="flex-1 bg-white border border-slate-200 rounded-xl overflow-hidden focus-within:border-emerald-400 focus-within:ring-1 focus-within:ring-emerald-400 transition-shadow shadow-sm">
-                        <textarea 
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            placeholder="Write a comment..."
-                            className="w-full p-4 outline-none resize-none text-sm text-slate-700 min-h-[80px]"
-                        />
-                        <div className="bg-slate-50 px-4 py-2 border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex-1 bg-white border border-slate-200 rounded-xl focus-within:border-emerald-400 focus-within:ring-1 focus-within:ring-emerald-400 transition-shadow shadow-sm">
+                        <div className="w-full relative">
+                            <textarea 
+                                ref={textareaRef}
+                                value={newComment}
+                                onChange={(e) => handleTextareaChange(e, false)}
+                                onClick={(e) => handleTextareaChange(e as any, false)}
+                                onKeyUp={(e) => handleTextareaChange(e as any, false)}
+                                placeholder="Write a comment... (Type @ to mention someone)"
+                                className="w-full px-4 py-3 outline-none resize-none text-sm text-slate-700 bg-transparent rounded-t-xl overflow-hidden"
+                                rows={1}
+                            />
+                            {renderMentionPopup(false)}
+                        </div>
+                        <div className="bg-slate-50 px-4 py-2 border-t border-slate-100 flex items-center justify-between rounded-b-xl">
                             <div className="flex items-center">
                                 <button
                                     onClick={() => fileInputRef.current?.click()}
@@ -275,12 +438,19 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members }) => {
                                         <div className="group flex items-center space-x-2">
                                             <div className="inline-block bg-white border border-slate-200 p-3 rounded-lg rounded-tl-none shadow-sm text-sm text-slate-700 max-w-full break-words">
                                                 {editingCommentId === event.id ? (
-                                                    <div className="flex flex-col space-y-2 min-w-[200px]">
-                                                        <textarea 
-                                                            value={editContent}
-                                                            onChange={(e) => setEditContent(e.target.value)}
-                                                            className="w-full p-2 border border-slate-200 rounded outline-none resize-none min-h-[60px]"
-                                                        />
+                                                    <div className="flex flex-col space-y-2 min-w-[200px] w-full">
+                                                        <div className="w-full relative bg-white border border-slate-200 rounded focus-within:border-emerald-400 focus-within:ring-1 focus-within:ring-emerald-400 transition-shadow shadow-sm">
+                                                            <textarea 
+                                                                ref={editAreaRef}
+                                                                value={editContent}
+                                                                onChange={(e) => handleTextareaChange(e, true)}
+                                                                onClick={(e) => handleTextareaChange(e as any, true)}
+                                                                onKeyUp={(e) => handleTextareaChange(e as any, true)}
+                                                                className="w-full px-3 py-2 outline-none resize-none text-sm text-slate-700 rounded overflow-hidden"
+                                                                rows={1}
+                                                            />
+                                                            {renderMentionPopup(true)}
+                                                        </div>
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center">
                                                                 <button

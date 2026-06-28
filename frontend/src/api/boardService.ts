@@ -52,3 +52,7 @@ export const addBoardMember = async (boardId: number, email: string): Promise<Bo
 export const removeBoardMember = async (boardId: number, userId: number): Promise<void> => {
     await apiClient.delete(`/boards/${boardId}/members/${userId}`);
 };
+
+export const updateBoardMemberRole = async (boardId: number, userId: number, role: string): Promise<void> => {
+    await apiClient.put(`/boards/${boardId}/members/${userId}/role`, { role });
+};

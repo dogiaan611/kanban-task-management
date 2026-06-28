@@ -9,18 +9,22 @@ interface KanbanCardProps {
         title: string;
         description: string;
         tags?: {id: number, name: string, color: string}[];
+        assigneeId?: number;
+        assigneeName?: string;
+        assigneeAvatarUrl?: string;
     };
     listTitle: string;
     index: number;
     onDelete: (id: number) => void;
+    isDragDisabled?: boolean;
 }
 
-const KanbanCard: React.FC<KanbanCardProps> = ({ card, listTitle, index, onDelete }) => {
+const KanbanCard: React.FC<KanbanCardProps> = ({ card, listTitle, index, onDelete, isDragDisabled = false }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     return (
         <>
-        <Draggable draggableId={`card-${card.id}`} index={index}>
+        <Draggable draggableId={`card-${card.id}`} index={index} isDragDisabled={isDragDisabled}>
             {(provided, snapshot) => (
                 <div
                     ref={provided.innerRef}
@@ -28,7 +32,7 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ card, listTitle, index, onDelet
                     {...provided.dragHandleProps}
                     style={provided.draggableProps.style}
                     onClick={() => setIsModalOpen(true)}
-                    className={`bg-white p-4 rounded-xl shadow-sm border border-slate-200 group relative cursor-grab active:cursor-grabbing ${
+                    className={`bg-white p-4 rounded-xl shadow-sm border border-slate-200 group relative ${isDragDisabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${
                         snapshot.isDragging ? 'shadow-lg border-emerald-300 ring-2 ring-emerald-100 z-50 opacity-90' : 'hover:border-emerald-300 hover:shadow-md transition-all duration-200'
                     }`}
                 >

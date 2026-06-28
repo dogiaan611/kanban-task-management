@@ -1,4 +1,5 @@
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 // Tạo một instance axios với cấu hình mặc định
 export const apiClient = axios.create({
@@ -57,6 +58,7 @@ apiClient.interceptors.response.use(
                 // Nếu gọi Refresh Token mà cũng lỗi (Refresh Token hết hạn luôn) -> Đá ra trang Login
                 localStorage.removeItem('token');
                 localStorage.removeItem('refreshToken');
+                toast.error('Your session has expired. Please log in again.');
                 window.location.href = '/login';
                 return Promise.reject(refreshError);
             }
@@ -66,7 +68,18 @@ apiClient.interceptors.response.use(
         if (error.response?.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('refreshToken');
+            toast.error('Your session has expired. Please log in again.');
             window.location.href = '/login';
+        } else if (error.response) {
+            // Global Error Notification
+            const message = error.response.data?.message || error.response.data || 'An unexpected error occurred';
+            
+            // Ignore 404s or specific errors if we don't want to toast them globally, but for now we toast all
+            if (error.response.status >= 400 && error.response.status !== 401 && error.response.status !== 404) {
+                 toast.error(typeof message === 'string' ? message : 'Error processing request');
+            }
+        } else {
+            toast.error('Network Error. Please check your connection.');
         }
 
         return Promise.reject(error);

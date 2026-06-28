@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, type DropResult } from '@hello-pangea/dnd';
-import { ArrowLeft, Plus, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, Plus, LayoutGrid, Filter } from 'lucide-react';
 import KanbanList from '../components/kanban/KanbanList';
+import BoardFilterBar from '../components/kanban/BoardFilterBar';
+import CalendarView from '../components/kanban/CalendarView';
+import CardDetailModal from '../components/kanban/CardDetailModal';
 import * as kanbanService from '../api/kanbanService';
-import { getBoardById } from '../api/boardService';
+import { getBoardById, getBoardMembers } from '../api/boardService';
+import { getTagsByBoard } from '../api/tagService';
 import { createWebSocketClient } from '../api/webSocketService';
 
 const BoardDetail = () => {
@@ -13,9 +17,20 @@ const BoardDetail = () => {
     const boardId = Number(id);
     const queryClient = useQueryClient();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const [isAddingList, setIsAddingList] = useState(false);
     const [newListTitle, setNewListTitle] = useState('');
+
+    // Filter states
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [filterKeyword, setFilterKeyword] = useState('');
+    const [filterAssigneeIds, setFilterAssigneeIds] = useState<number[]>([]);
+    const [filterTagIds, setFilterTagIds] = useState<number[]>([]);
+
+    // View State
+    const [viewMode, setViewMode] = useState<'board' | 'calendar'>('board');
+    const [selectedCardForModal, setSelectedCardForModal] = useState<any | null>(null);
 
     // Lấy tên Board từ API
     const { data: boardInfo } = useQuery({
@@ -30,6 +45,47 @@ const BoardDetail = () => {
         enabled: !!boardId,
         meta: { boardId }
     });
+
+    const { data: members = [] } = useQuery({
+        queryKey: ['boardMembers', boardId],
+        queryFn: () => getBoardMembers(boardId),
+        enabled: !!boardId
+    });
+
+    const { data: tags = [] } = useQuery({
+        queryKey: ['tags', boardId],
+        queryFn: () => getTagsByBoard(boardId),
+        enabled: !!boardId
+    });
+
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const currentMemberRole = members.find((m: any) => m.email === currentUser.email)?.role || 'MEMBER';
+    const isViewer = currentMemberRole === 'VIEWER';
+
+    const isFilterActive = filterKeyword.trim() !== '' || filterAssigneeIds.length > 0 || filterTagIds.length > 0;
+
+    const filteredLists = React.useMemo(() => {
+        if (!lists) return [];
+        if (!isFilterActive) return lists;
+
+        return lists.map((list: any) => ({
+            ...list,
+            cards: list.cards?.filter((card: any) => {
+                let match = true;
+                if (filterKeyword.trim()) {
+                    const kw = filterKeyword.toLowerCase();
+                    match = match && ((card.title?.toLowerCase().includes(kw)) || (card.description?.toLowerCase().includes(kw)));
+                }
+                if (filterAssigneeIds.length > 0) {
+                    match = match && filterAssigneeIds.includes(card.assigneeId);
+                }
+                if (filterTagIds.length > 0) {
+                    match = match && filterTagIds.some(tagId => card.tags?.some((t: any) => t.id === tagId));
+                }
+                return match;
+            })
+        }));
+    }, [lists, isFilterActive, filterKeyword, filterAssigneeIds, filterTagIds]);
 
     useEffect(() => {
         if (!boardId) return;
@@ -50,6 +106,45 @@ const BoardDetail = () => {
             client.deactivate();
         };
     }, [boardId, queryClient]);
+
+    // View mode listener
+    useEffect(() => {
+        const handleViewChange = (e: any) => setViewMode(e.detail);
+        const handleToggleFilter = () => setIsFilterOpen(prev => !prev);
+        
+        window.addEventListener('requestBoardView', handleViewChange);
+        window.addEventListener('toggleBoardFilter', handleToggleFilter);
+        
+        return () => {
+            window.removeEventListener('requestBoardView', handleViewChange);
+            window.removeEventListener('toggleBoardFilter', handleToggleFilter);
+        };
+    }, []);
+
+    // Check modal card from URL
+    useEffect(() => {
+        const cardId = searchParams.get('cardId');
+        if (cardId && lists) {
+            let foundCard = null;
+            for (const list of lists) {
+                const card = list.cards?.find((c: any) => c.id === Number(cardId));
+                if (card) {
+                    foundCard = card;
+                    break;
+                }
+            }
+            if (foundCard) {
+                setSelectedCardForModal(foundCard);
+            }
+        } else if (!cardId) {
+            setSelectedCardForModal(null);
+        }
+    }, [searchParams, lists]);
+
+    const handleCloseCardModal = () => {
+        setSelectedCardForModal(null);
+        setSearchParams(new URLSearchParams());
+    };
 
     const createListMutation = useMutation({
         mutationFn: (title: string) => kanbanService.createList(boardId, title),
@@ -168,69 +263,101 @@ const BoardDetail = () => {
     }
 
     return (
-        <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-emerald-50/30 overflow-hidden">
+        <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-emerald-50/30 overflow-hidden relative">
 
+            {isFilterOpen && (
+                <BoardFilterBar
+                    members={members}
+                    tags={tags}
+                    keyword={filterKeyword}
+                    setKeyword={setFilterKeyword}
+                    assigneeIds={filterAssigneeIds}
+                    setAssigneeIds={setFilterAssigneeIds}
+                    tagIds={filterTagIds}
+                    setTagIds={setFilterTagIds}
+                />
+            )}
 
-            {/* Kanban Board Area */}
-            <div className="flex-1 overflow-x-auto overflow-y-hidden p-8">
-                <DragDropContext onDragEnd={handleDragEnd}>
-                    <Droppable droppableId="board" type="list" direction="horizontal">
-                        {(provided) => (
-                            <div 
-                                ref={provided.innerRef}
-                                {...provided.droppableProps}
-                                className="flex items-start space-x-6 h-full"
-                            >
-                                {lists?.map((list: any, index: number) => (
-                                    <KanbanList
-                                        key={list.id}
-                                        list={list}
-                                        index={index}
-                                        onDeleteList={(id) => deleteListMutation.mutate(id)}
-                                        onCreateCard={(listId, title) => createCardMutation.mutate({ listId, title })}
-                                        onDeleteCard={(id) => deleteCardMutation.mutate(id)}
-                                    />
-                                ))}
-                                {provided.placeholder}
-
-                                {/* Add New List Button */}
-                                <div className="shrink-0 w-80">
-                                    {isAddingList ? (
-                                        <form onSubmit={handleCreateList} className="bg-white p-3 rounded-2xl shadow-sm border border-emerald-200">
-                                            <input
-                                                type="text"
-                                                value={newListTitle}
-                                                onChange={(e) => setNewListTitle(e.target.value)}
-                                                placeholder="Enter list title..."
-                                                className="w-full px-3 py-2 text-sm outline-none text-slate-700 bg-slate-50 rounded-lg mb-3 border border-slate-200 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400"
-                                                autoFocus
+            {/* Board Content */}
+            {viewMode === 'board' ? (
+                <div className="flex-1 overflow-hidden flex flex-col bg-slate-100 border-none">
+                    <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6 pb-12">
+                        <DragDropContext onDragEnd={handleDragEnd}>
+                            <Droppable droppableId="board" type="list" direction="horizontal" isDropDisabled={isViewer}>
+                                {(provided) => (
+                                    <div
+                                        className="flex items-start gap-4 md:gap-6 h-full flex-nowrap"
+                                        ref={provided.innerRef}
+                                        {...provided.droppableProps}
+                                    >
+                                        {filteredLists?.map((list: any, index: number) => (
+                                            <KanbanList
+                                                key={list.id}
+                                                list={list}
+                                                index={index}
+                                                isViewer={isViewer}
+                                                isDragDisabled={isViewer}
+                                                onDeleteList={(id) => deleteListMutation.mutate(id)}
+                                                onCreateCard={(listId, title) => createCardMutation.mutate({ listId, title })}
+                                                onDeleteCard={(id) => deleteCardMutation.mutate(id)}
                                             />
-                                            <div className="flex items-center space-x-2">
-                                                <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors">
-                                                    Add List
-                                                </button>
-                                                <button type="button" onClick={() => setIsAddingList(false)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
-                                                    Cancel
-                                                </button>
+                                        ))}
+                                        {provided.placeholder}
+
+                                        {/* Add New List Button */}
+                                        {!isViewer && (
+                                            <div className="shrink-0 w-72 md:w-80">
+                                                {isAddingList ? (
+                                                    <form onSubmit={handleCreateList} className="bg-white p-3 rounded-2xl shadow-sm border border-emerald-200">
+                                                        <input
+                                                            type="text"
+                                                            value={newListTitle}
+                                                            onChange={(e) => setNewListTitle(e.target.value)}
+                                                            placeholder="Enter list title..."
+                                                            className="w-full px-3 py-2 text-sm outline-none text-slate-700 bg-slate-50 rounded-lg mb-3 border border-slate-200 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400"
+                                                            autoFocus
+                                                        />
+                                                        <div className="flex items-center space-x-2">
+                                                            <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                                                                Add List
+                                                            </button>
+                                                            <button type="button" onClick={() => setIsAddingList(false)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    </form>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => setIsAddingList(true)}
+                                                        className="w-full flex items-center px-5 py-4 bg-white/50 hover:bg-white text-slate-600 font-medium rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-300 transition-all group"
+                                                    >
+                                                        <Plus className="w-5 h-5 mr-2 text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                                                        Add another list
+                                                    </button>
+                                                )}
                                             </div>
-                                        </form>
-                                    ) : (
-                                        <button
-                                            onClick={() => setIsAddingList(true)}
-                                            className="w-full flex items-center px-5 py-4 bg-white/50 hover:bg-white text-slate-600 font-medium rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-300 transition-all group"
-                                        >
-                                            <Plus className="w-5 h-5 mr-2 text-slate-400 group-hover:text-emerald-500 transition-colors" />
-                                            Add another list
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </Droppable>
-                </DragDropContext>
-            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </Droppable>
+                        </DragDropContext>
+                    </div>
+                </div>
+            ) : (
+                <div className="flex-1 overflow-hidden p-4 md:p-6">
+                    <CalendarView lists={filteredLists} onCardClick={(card) => {
+                        setSearchParams({ cardId: card.id.toString() });
+                    }} />
+                </div>
+            )}
 
-
+            {selectedCardForModal && (
+                <CardDetailModal 
+                    card={selectedCardForModal} 
+                    listTitle={lists?.find((l: any) => l.cards?.some((c: any) => c.id === selectedCardForModal.id))?.title || 'Unknown List'}
+                    onClose={handleCloseCardModal} 
+                />
+            )}
         </div>
     );
 };

@@ -15,8 +15,8 @@ export const getCommentsByCard = async (cardId: number): Promise<Comment[]> => {
     return response.data;
 };
 
-export const addComment = async (cardId: number, content: string): Promise<Comment> => {
-    const response = await apiClient.post(`/comments/card/${cardId}`, { content });
+export const addComment = async (cardId: number, content: string, mentionedUserIds?: number[]): Promise<Comment> => {
+    const response = await apiClient.post(`/comments/card/${cardId}`, { content, mentionedUserIds });
     return response.data;
 };
 

@@ -10,7 +10,7 @@ export default function Register() {
     const prefilledEmail = searchParams.get('email') || '';
     const redirectTo = searchParams.get('redirect') || '';
 
-    const { register, handleSubmit, formState: { errors } } = useForm({
+    const { register, handleSubmit, formState: { errors } } = useForm<any>({
         defaultValues: { email: prefilledEmail }
     });
     const [errorMessage, setErrorMessage] = useState('');
@@ -82,18 +82,18 @@ export default function Register() {
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-2">Email</label>
                                 <input
-                                    type="email"
-                                    className="w-full px-5 py-3.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-300 font-medium text-slate-700"
-                                    placeholder="your@email.com"
-                                    {...register('email', {
-                                        required: 'Please enter your Email',
+                                    {...register("email", { 
+                                        required: "Email is required",
                                         pattern: {
                                             value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                                            message: "Invalid email format"
+                                            message: "Invalid email address"
                                         }
                                     })}
+                                    type="email"
+                                    placeholder="name@company.com"
+                                    className={`w-full px-5 py-3.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-300 font-medium text-slate-700 ${errors.email ? 'border-red-500' : 'border-slate-200'}`}
                                 />
-                                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message as string}</p>}
+                                {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message as string}</p>}
                             </div>
 
                             {/* Password Field */}
@@ -102,7 +102,7 @@ export default function Register() {
                                 <div className="relative">
                                     <input
                                         type={showPassword ? "text" : "password"}
-                                        className="w-full px-5 py-3.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-300 font-medium pr-12 text-slate-700"
+                                        className={`w-full px-5 py-3.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-300 font-medium pr-12 text-slate-700 ${errors.password ? 'border-red-500' : 'border-slate-200'}`}
                                         placeholder="••••••••"
                                         {...register('password', {
                                             required: 'Please enter your Password',

@@ -1,8 +1,8 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Users, Settings, LogOut, Briefcase, User as UserIcon } from 'lucide-react';
-
-const Sidebar = () => {
+import NotificationBell from './NotificationBell';
+const Sidebar = ({ isOpen = false }: { isOpen?: boolean }) => {
     // Xử lý đăng xuất (Xóa token và đẩy về login)
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -10,7 +10,7 @@ const Sidebar = () => {
     };
 
     return (
-        <aside className="w-64 bg-emerald-600 text-white flex flex-col h-screen shrink-0 shadow-2xl transition-all duration-300">
+        <aside className={`w-64 bg-emerald-600 text-white flex flex-col h-full shrink-0 shadow-2xl transition-transform duration-300 z-50 fixed md:relative ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
             {/* Logo Area */}
             <div className="h-16 flex items-center justify-center border-b border-white/20 font-extrabold text-xl tracking-wider text-white">
                 KANBAN
@@ -46,11 +46,9 @@ const Sidebar = () => {
                     <span>Workspaces</span>
                 </NavLink>
 
-                {/* Tính năng mở rộng sau này */}
-                <div className="flex items-center px-4 py-3 rounded-xl text-white/40 cursor-not-allowed font-medium">
-                    <Users className="w-5 h-5 mr-3" />
-                    <span>Members</span>
-                </div>
+                <NotificationBell />
+
+
                 <NavLink
                     to="/profile"
                     className={({ isActive }) =>
