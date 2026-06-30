@@ -30,6 +30,7 @@ public class BoardService {
     private final com.kanban.backend.repository.BoardMemberRepository boardMemberRepository;
     private final InvitationService invitationService;
     private final PermissionService permissionService;
+    private final NotificationService notificationService;
 
     // 1. TẠO BOARD MỚI TRONG WORKSPACE
     @Transactional
@@ -222,6 +223,8 @@ public class BoardService {
             boardMember.setRole(newRole);
         }
         boardMemberRepository.save(boardMember);
+        
+        notificationService.notifyRoleChange(targetUser, user, board, newRole);
     }
 
     // 7. GỬI EMAIL MỜI THÀNH VIÊN VÀO WORKSPACE (qua Board)

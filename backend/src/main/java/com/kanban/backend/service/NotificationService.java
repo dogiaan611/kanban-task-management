@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import com.kanban.backend.entity.Card;
 import com.kanban.backend.entity.Checklist;
 import com.kanban.backend.entity.Comment;
+import com.kanban.backend.entity.Board;
 import com.kanban.backend.repository.ChecklistRepository;
 import com.kanban.backend.repository.CommentRepository;
 
@@ -57,6 +58,24 @@ public class NotificationService {
                 .title("You were mentioned")
                 .message(mentioner.getFullName() + " mentioned you in a comment on card \"" + card.getTitle() + "\"")
                 .link("/board/" + card.getList().getBoard().getId() + "?cardId=" + card.getId())
+                .read(false)
+                .build();
+
+        notification = notificationRepository.save(notification);
+        NotificationResponse response = toResponse(notification);
+        messagingTemplate.convertAndSend("/topic/user/" + targetUser.getId() + "/notifications", response);
+    }
+
+    @Transactional
+    public void notifyRoleChange(User targetUser, User admin, Board board, String newRole) {
+        if (targetUser.getId().equals(admin.getId())) return;
+        
+        Notification notification = Notification.builder()
+                .user(targetUser)
+                .type("ROLE_CHANGE")
+                .title("Role Update")
+                .message(admin.getFullName() + " has changed your role in board \"" + board.getName() + "\" to " + newRole)
+                .link("/board/" + board.getId())
                 .read(false)
                 .build();
 

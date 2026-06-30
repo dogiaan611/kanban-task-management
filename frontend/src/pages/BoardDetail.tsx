@@ -355,7 +355,8 @@ const BoardDetail = () => {
                 <CardDetailModal 
                     card={selectedCardForModal} 
                     listTitle={lists?.find((l: any) => l.cards?.some((c: any) => c.id === selectedCardForModal.id))?.title || 'Unknown List'}
-                    onClose={handleCloseCardModal} 
+                    onClose={handleCloseCardModal}
+                    isViewer={isViewer}
                 />
             )}
         </div>

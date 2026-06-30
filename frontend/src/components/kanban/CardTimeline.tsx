@@ -11,6 +11,7 @@ import { type BoardMember } from '../../api/boardService';
 interface CardTimelineProps {
     cardId: number;
     members: BoardMember[];
+    isViewer?: boolean;
 }
 
 const timeAgo = (dateString: string) => {
@@ -27,7 +28,7 @@ const timeAgo = (dateString: string) => {
     return `${days} days ago`;
 };
 
-const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members }) => {
+const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members, isViewer = false }) => {
     const queryClient = useQueryClient();
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const [newComment, setNewComment] = useState('');
@@ -358,12 +359,12 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members }) => {
             {/* Checklist Tab */}
             {activeTab === 'checklist' && (
                 <div className="bg-slate-100/30 p-4 rounded-xl border border-slate-200">
-                    <ChecklistBlock cardId={cardId} members={members} />
+                    <ChecklistBlock cardId={cardId} members={members} isViewer={isViewer} />
                 </div>
             )}
 
             {/* Comment Input */}
-            {activeTab === 'comments' && (
+            {activeTab === 'comments' && !isViewer && (
                 <div className="flex items-start space-x-4 mb-8">
                     {currentUser.avatarUrl ? (
                         <img src={currentUser.avatarUrl} alt="Me" className="w-8 h-8 rounded-full object-cover flex-shrink-0 border-2 border-white shadow-sm" />
@@ -489,7 +490,7 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members }) => {
                                                 )}
                                             </div>
                                             
-                                            {(currentUser.id === event.userId || currentUser.id === (event as any).userId) && editingCommentId !== event.id && (
+                                            {(currentUser.id === event.userId || currentUser.id === (event as any).userId) && editingCommentId !== event.id && !isViewer && (
                                                 <div className="relative">
                                                 <button 
                                                     onClick={() => setOpenMenuId(openMenuId === event.id ? null : event.id)}

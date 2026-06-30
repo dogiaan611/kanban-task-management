@@ -16,9 +16,10 @@ export interface BoardMember {
 interface ChecklistBlockProps {
     cardId: number;
     members: BoardMember[];
+    isViewer?: boolean;
 }
 
-const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId, members = [] }) => {
+const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId, members = [], isViewer = false }) => {
     const queryClient = useQueryClient();
     const [items, setItems] = useState<ChecklistItem[]>([]);
     const [newItemTitle, setNewItemTitle] = useState('');
@@ -142,7 +143,8 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId, members = [] })
                                 type="checkbox"
                                 checked={item.isCompleted}
                                 onChange={() => handleToggleComplete(item)}
-                                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                disabled={isViewer}
+                                className={`w-4 h-4 rounded border-slate-300 focus:ring-blue-500 ${isViewer ? 'cursor-not-allowed opacity-60 text-slate-400' : 'text-blue-600 cursor-pointer'}`}
                             />
                         </div>
                         <div className="ml-3 flex-1 flex flex-col sm:flex-row sm:items-center">
@@ -153,8 +155,9 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId, members = [] })
                             {/* Assignee Selection */}
                             <div className="flex items-center space-x-2 mt-2 sm:mt-0 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button 
-                                    onClick={() => setAssignPopoverId(assignPopoverId === item.id ? null : item.id)}
-                                    className="flex items-center justify-center rounded-full hover:bg-slate-200 p-1 transition-colors"
+                                    onClick={() => !isViewer && setAssignPopoverId(assignPopoverId === item.id ? null : item.id)}
+                                    disabled={isViewer}
+                                    className={`flex items-center justify-center rounded-full p-1 transition-colors ${!isViewer ? 'hover:bg-slate-200 cursor-pointer' : 'cursor-not-allowed'}`}
                                     title={item.assigneeName ? `Assigned to ${item.assigneeName}` : 'Assign member'}
                                 >
                                     {item.assigneeId ? (
@@ -172,12 +175,14 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId, members = [] })
                                     )}
                                 </button>
 
-                                <button 
-                                    onClick={() => handleDeleteItem(item.id)}
-                                    className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-slate-100 transition-colors"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
+                                {!isViewer && (
+                                    <button 
+                                        onClick={() => handleDeleteItem(item.id)}
+                                        className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-slate-100 transition-colors"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                )}
                                 
                                 {/* Always show avatar if assigned, even if not hovering */}
                                 {item.assigneeId && assignPopoverId !== item.id && (
@@ -225,24 +230,26 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId, members = [] })
             </div>
 
             {/* Add Item Form */}
-            <form onSubmit={handleAddItem} className="mt-2">
-                <div className="flex items-center space-x-2">
-                    <input 
-                        type="text"
-                        value={newItemTitle}
-                        onChange={(e) => setNewItemTitle(e.target.value)}
-                        placeholder="Add an item..."
-                        className="flex-1 border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-shadow"
-                    />
-                    <button 
-                        type="submit"
-                        disabled={!newItemTitle.trim()}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
-                    >
-                        Add
-                    </button>
-                </div>
-            </form>
+            {!isViewer && (
+                <form onSubmit={handleAddItem} className="mt-2">
+                    <div className="flex items-center space-x-2">
+                        <input 
+                            type="text"
+                            value={newItemTitle}
+                            onChange={(e) => setNewItemTitle(e.target.value)}
+                            placeholder="Add an item..."
+                            className="flex-1 border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-shadow"
+                        />
+                        <button 
+                            type="submit"
+                            disabled={!newItemTitle.trim()}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                        >
+                            Add
+                        </button>
+                    </div>
+                </form>
+            )}
         </div>
     );
 };

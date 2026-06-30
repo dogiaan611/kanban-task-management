@@ -93,7 +93,8 @@ public class CommentService {
     @Transactional(readOnly = true)
     public List<CommentResponse> getCommentsByCard(Long cardId, String email) {
         Card card = cardRepository.findById(cardId).orElseThrow(() -> new RuntimeException("Card not found"));
-        getUserAndCheckAccess(card, email);
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        permissionService.checkBoardViewerOrAbove(card.getList().getBoard(), user);
         return commentRepository.findByCardOrderByCreatedAtDesc(card).stream()
                 .map(c -> new CommentResponse(c.getId(), c.getContent(), c.getUser().getId(), c.getUser().getFullName(), c.getUser().getAvatarUrl(), c.getCreatedAt(), c.getUpdatedAt()))
                 .collect(Collectors.toList());

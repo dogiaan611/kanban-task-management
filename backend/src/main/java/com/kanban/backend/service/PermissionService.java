@@ -39,9 +39,8 @@ public class PermissionService {
             return;
         }
 
-        BoardMember member = boardMemberRepository.findByBoardAndUser(board, user)
-                .orElseThrow(() -> new RuntimeException("Bạn không phải là thành viên của Board này"));
-        if (!"ADMIN".equals(member.getRole())) {
+        BoardMember member = boardMemberRepository.findByBoardAndUser(board, user).orElse(null);
+        if (member == null || !"ADMIN".equals(member.getRole())) {
             throw new RuntimeException("Chỉ Quản trị viên (Admin) của Board mới có quyền thực hiện hành động này.");
         }
     }
@@ -54,9 +53,8 @@ public class PermissionService {
             return;
         }
 
-        BoardMember member = boardMemberRepository.findByBoardAndUser(board, user)
-                .orElseThrow(() -> new RuntimeException("Bạn không phải là thành viên của Board này"));
-        if ("VIEWER".equals(member.getRole())) {
+        BoardMember member = boardMemberRepository.findByBoardAndUser(board, user).orElse(null);
+        if (member != null && "VIEWER".equals(member.getRole())) {
             throw new RuntimeException("Người xem (Viewer) không có quyền thay đổi dữ liệu.");
         }
     }

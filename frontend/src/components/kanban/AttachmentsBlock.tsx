@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { Paperclip, Trash2, File as FileIcon, Image as ImageIcon, Download, Loader2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAttachments, uploadAttachment, deleteAttachment, type Attachment } from '../../api/attachmentService';
-
 interface AttachmentsBlockProps {
     cardId: number;
+    isViewer?: boolean;
 }
 
-const AttachmentsBlock: React.FC<AttachmentsBlockProps> = ({ cardId }) => {
+const AttachmentsBlock: React.FC<AttachmentsBlockProps> = ({ cardId, isViewer = false }) => {
     const queryClient = useQueryClient();
     const [isUploading, setIsUploading] = useState(false);
 
@@ -67,13 +67,15 @@ const AttachmentsBlock: React.FC<AttachmentsBlockProps> = ({ cardId }) => {
                     <Paperclip className="w-5 h-5 text-slate-700 shrink-0" />
                     <h3 className="text-lg font-bold text-slate-800 truncate">Attachments</h3>
                 </div>
-                <div className="flex-1">
-                    <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center space-x-2">
-                        {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-                        <span>Add</span>
-                        <input type="file" className="hidden" onChange={handleFileChange} disabled={isUploading} />
-                    </label>
-                </div>
+                {!isViewer && (
+                    <div className="flex-1">
+                        <label className={`cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center space-x-2 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                            <span>Add</span>
+                            <input type="file" className="hidden" onChange={handleFileChange} disabled={isUploading || isViewer} />
+                        </label>
+                    </div>
+                )}
             </div>
 
             {isLoading ? (
@@ -108,13 +110,15 @@ const AttachmentsBlock: React.FC<AttachmentsBlockProps> = ({ cardId }) => {
                                         <Download className="w-3.5 h-3.5" />
                                         <span>Download</span>
                                     </button>
-                                    <button 
-                                        onClick={() => deleteMutation.mutate(attachment.id)}
-                                        className="text-xs font-medium text-slate-600 hover:text-rose-600 flex items-center space-x-1 underline decoration-transparent hover:decoration-rose-600 transition-all"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                        <span>Delete</span>
-                                    </button>
+                                    {!isViewer && (
+                                        <button 
+                                            onClick={() => deleteMutation.mutate(attachment.id)}
+                                            className="text-xs font-medium text-slate-600 hover:text-rose-600 flex items-center space-x-1 underline decoration-transparent hover:decoration-rose-600 transition-all"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                            <span>Delete</span>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>

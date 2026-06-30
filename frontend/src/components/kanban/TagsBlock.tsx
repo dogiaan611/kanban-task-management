@@ -13,6 +13,7 @@ export interface Tag {
 interface TagsBlockProps {
     cardId: number;
     cardTags?: Tag[];
+    isViewer?: boolean;
 }
 
 const TAG_COLORS = [
@@ -26,7 +27,7 @@ const TAG_COLORS = [
     { name: 'Gray', hex: 'bg-slate-500 hover:bg-slate-600' }
 ];
 
-const TagsBlock: React.FC<TagsBlockProps> = ({ cardId, cardTags = [] }) => {
+const TagsBlock: React.FC<TagsBlockProps> = ({ cardId, cardTags = [], isViewer = false }) => {
     const { id } = useParams<{ id: string }>();
     const boardId = Number(id);
     const queryClient = useQueryClient();
@@ -106,20 +107,22 @@ const TagsBlock: React.FC<TagsBlockProps> = ({ cardId, cardTags = [] }) => {
                 {cardTags.map(tag => (
                     <span 
                         key={tag.id} 
-                        className={`px-3 py-1 rounded-md text-white text-sm font-medium ${tag.color} cursor-pointer opacity-90 hover:opacity-100 transition-opacity`}
-                        onClick={() => setIsPopoverOpen(true)}
+                        className={`px-3 py-1 rounded-md text-white text-sm font-medium ${tag.color} ${!isViewer ? 'cursor-pointer hover:opacity-100' : 'cursor-default'} opacity-90 transition-opacity`}
+                        onClick={() => !isViewer && setIsPopoverOpen(true)}
                     >
                         {tag.name || '\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0'}
                     </span>
                 ))}
                 
-                <button 
-                    onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-                    className="flex items-center justify-center w-8 h-8 rounded-md bg-slate-200/60 hover:bg-slate-300/60 text-slate-600 transition-colors"
-                    title="Add labels"
-                >
-                    <Plus className="w-4 h-4" />
-                </button>
+                {!isViewer && (
+                    <button 
+                        onClick={() => setIsPopoverOpen(!isPopoverOpen)}
+                        className="flex items-center justify-center w-8 h-8 rounded-md bg-slate-200/60 hover:bg-slate-300/60 text-slate-600 transition-colors"
+                        title="Add labels"
+                    >
+                        <Plus className="w-4 h-4" />
+                    </button>
+                )}
             </div>
 
             {isPopoverOpen && (
