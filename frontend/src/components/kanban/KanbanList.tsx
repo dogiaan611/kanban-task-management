@@ -15,9 +15,10 @@ interface KanbanListProps {
     onDeleteCard: (cardId: number) => void;
     isDragDisabled?: boolean;
     isViewer?: boolean;
+    isAdmin?: boolean;
 }
 
-const KanbanList: React.FC<KanbanListProps> = ({ list, index, onDeleteList, onCreateCard, onDeleteCard, isDragDisabled = false, isViewer = false }) => {
+const KanbanList: React.FC<KanbanListProps> = ({ list, index, onDeleteList, onCreateCard, onDeleteCard, isDragDisabled = false, isViewer = false, isAdmin = false }) => {
     const [isAddingCard, setIsAddingCard] = useState(false);
     const [newCardTitle, setNewCardTitle] = useState('');
 
@@ -75,6 +76,7 @@ const KanbanList: React.FC<KanbanListProps> = ({ list, index, onDeleteList, onCr
                                         index={idx} 
                                         onDelete={onDeleteCard}
                                         isDragDisabled={isDragDisabled}
+                                        isAdmin={isAdmin}
                                     />
                                 ))}
                                 {provided.placeholder}

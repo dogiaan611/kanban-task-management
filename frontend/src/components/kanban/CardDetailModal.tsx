@@ -22,6 +22,7 @@ interface CardDetailModalProps {
         assigneeId?: number;
         assigneeName?: string;
         assigneeAvatarUrl?: string;
+        createdById?: number;
     };
     listTitle: string;
     onClose: () => void;
@@ -43,6 +44,13 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, listTitle, onCl
         queryFn: () => getBoardMembers(boardId),
         enabled: !!boardId
     });
+
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const currentMember = members.find(m => m.userId === currentUser.id);
+    const isAdmin = currentMember?.role === 'ADMIN' || currentMember?.role === 'ROLE_ADMIN';
+    const isCreator = card.createdById === currentUser.id;
+    const canEdit = isAdmin || isCreator;
+    const isDisabled = isViewer || !canEdit;
 
     const getInitials = (name: string) => {
         return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
@@ -151,8 +159,8 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, listTitle, onCl
                                         e.currentTarget.blur();
                                     }
                                 }}
-                                disabled={isViewer}
-                                className={`w-full text-2xl font-bold text-slate-800 leading-tight text-center bg-transparent border border-transparent hover:bg-slate-200 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 rounded px-4 py-1 transition-colors outline-none ${isViewer ? 'cursor-not-allowed' : ''}`}
+                                disabled={isDisabled}
+                                className={`w-full text-2xl font-bold text-slate-800 leading-tight text-center bg-transparent border border-transparent hover:bg-slate-200 focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 rounded px-4 py-1 transition-colors outline-none ${isDisabled ? 'cursor-not-allowed' : ''}`}
                             />
                             <p className="text-sm text-slate-500">
                                 in list <span className="font-semibold underline decoration-slate-300">{listTitle}</span>
@@ -161,7 +169,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, listTitle, onCl
                     </div>
 
                     <div className="space-y-6">
-                        <TagsBlock cardId={card.id} cardTags={card.tags} isViewer={isViewer} />
+                        <TagsBlock cardId={card.id} cardTags={card.tags} isViewer={isDisabled} isAdmin={isAdmin} />
                         
                         <div className="flex flex-wrap sm:flex-nowrap items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-8 relative">
                             <div className="flex items-center space-x-3 w-40 shrink-0">
@@ -170,9 +178,9 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, listTitle, onCl
                             </div>
                             <div className="flex-1">
                                     <button 
-                                        disabled={isViewer}
+                                        disabled={isDisabled}
                                         onClick={() => setIsAssignPopoverOpen(!isAssignPopoverOpen)}
-                                        className={`flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors border border-transparent shadow-sm ${isViewer ? 'cursor-not-allowed' : ''}`}
+                                        className={`flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors border border-transparent shadow-sm ${isDisabled ? 'cursor-not-allowed' : ''}`}
                                     >
                                         {card.assigneeId ? (
                                             <>
@@ -195,7 +203,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, listTitle, onCl
                                         )}
                                     </button>
                                     
-                                    {!isViewer && isAssignPopoverOpen && (
+                                    {!isDisabled && isAssignPopoverOpen && (
                                         <>
                                             <div className="fixed inset-0 z-10" onClick={() => setIsAssignPopoverOpen(false)} />
                                             <div className="absolute top-full left-8 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 z-20 py-2">
@@ -235,8 +243,8 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, listTitle, onCl
                                     type="date" 
                                     value={dueDate}
                                     onChange={handleSaveDueDate}
-                                    disabled={isViewer}
-                                    className={`border border-slate-300 rounded-md px-4 py-2 text-sm text-slate-700 focus:outline-none focus:border-emerald-400 shadow-sm transition-colors ${isViewer ? 'cursor-not-allowed bg-slate-100' : ''}`}
+                                    disabled={isDisabled}
+                                    className={`border border-slate-300 rounded-md px-4 py-2 text-sm text-slate-700 focus:outline-none focus:border-emerald-400 shadow-sm transition-colors ${isDisabled ? 'cursor-not-allowed bg-slate-100' : ''}`}
                                 />
                             </div>
                         </div>
@@ -260,7 +268,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, listTitle, onCl
                                 <AlignLeft className="w-5 h-5 text-slate-700" />
                                 <h3 className="text-lg font-bold text-slate-800">Description</h3>
                             </div>
-                            {isEditingDesc && !isViewer ? (
+                            {isEditingDesc && !isDisabled ? (
                                 <div className="ml-8">
                                     <textarea 
                                         value={descValue}
@@ -280,17 +288,24 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, listTitle, onCl
                                 </div>
                             ) : (
                                 <div 
-                                    onClick={() => !isViewer && setIsEditingDesc(true)}
-                                    className={`ml-8 bg-slate-100/50 p-4 rounded-md border border-transparent hover:bg-slate-100 text-slate-600 text-sm min-h-[80px] transition-colors shadow-sm ${!isViewer ? 'cursor-pointer' : ''}`}
+                                    onClick={() => !isDisabled && setIsEditingDesc(true)}
+                                    className={`ml-8 bg-slate-100/50 p-4 rounded-md border border-transparent hover:bg-slate-100 text-slate-600 text-sm min-h-[80px] transition-colors shadow-sm ${!isDisabled ? 'cursor-pointer' : ''}`}
                                 >
-                                    {descValue ? descValue : (isViewer ? 'No description provided.' : 'Add a more detailed description...')}
+                                    {descValue ? descValue : (isDisabled ? 'No description provided.' : 'Add a more detailed description...')}
                                 </div>
                             )}
                         </div>
                     </div>
 
                     {/* Timeline (Comments & Activity) */}
-                    <CardTimeline cardId={card.id} members={members} />
+                    <CardTimeline 
+                        cardId={card.id} 
+                        members={members} 
+                        isViewer={isViewer} 
+                        isAdmin={isAdmin} 
+                        isCreator={isCreator} 
+                        currentUserId={currentUser.id} 
+                    />
                 </div>
             </div>
         </div>

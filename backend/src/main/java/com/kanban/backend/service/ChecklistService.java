@@ -62,6 +62,17 @@ public class ChecklistService {
         User user = getUser(userEmail);
         permissionService.checkBoardMemberOrAdmin(card.getList().getBoard(), user);
 
+        boolean isAdmin = false;
+        try {
+            permissionService.checkBoardAdmin(card.getList().getBoard(), user);
+            isAdmin = true;
+        } catch (Exception e) {}
+        boolean isCreator = card.getCreatedBy() != null && card.getCreatedBy().getId().equals(user.getId());
+
+        if (!isAdmin && !isCreator) {
+            throw new RuntimeException("Bạn không có quyền thêm checklist!");
+        }
+
         Double maxPosition = checklistRepository.findTopByCardOrderByPositionDesc(card)
                 .map(Checklist::getPosition)
                 .orElse(0.0);
@@ -97,6 +108,24 @@ public class ChecklistService {
                 .orElseThrow(() -> new RuntimeException("Checklist item not found"));
         User user = getUser(userEmail);
         permissionService.checkBoardMemberOrAdmin(item.getCard().getList().getBoard(), user);
+
+        boolean isAdmin = false;
+        try {
+            permissionService.checkBoardAdmin(item.getCard().getList().getBoard(), user);
+            isAdmin = true;
+        } catch (Exception e) {}
+        boolean isCreator = item.getCard().getCreatedBy() != null && item.getCard().getCreatedBy().getId().equals(user.getId());
+        boolean isAssignee = item.getCard().getAssignee() != null && item.getCard().getAssignee().getId().equals(user.getId());
+
+        if (!isAdmin && !isCreator) {
+            if (isAssignee) {
+                if (request.getTitle() != null || request.getAssigneeId() != null) {
+                    throw new RuntimeException("Người được giao việc chỉ có thể tích hoàn thành checklist!");
+                }
+            } else {
+                throw new RuntimeException("Bạn không có quyền sửa checklist này!");
+            }
+        }
 
         if (request.getTitle() != null) {
             item.setTitle(request.getTitle());
@@ -165,6 +194,17 @@ public class ChecklistService {
                 .orElseThrow(() -> new RuntimeException("Checklist item not found"));
         User user = getUser(userEmail);
         permissionService.checkBoardMemberOrAdmin(item.getCard().getList().getBoard(), user);
+
+        boolean isAdmin = false;
+        try {
+            permissionService.checkBoardAdmin(item.getCard().getList().getBoard(), user);
+            isAdmin = true;
+        } catch (Exception e) {}
+        boolean isCreator = item.getCard().getCreatedBy() != null && item.getCard().getCreatedBy().getId().equals(user.getId());
+
+        if (!isAdmin && !isCreator) {
+            throw new RuntimeException("Bạn không có quyền xóa checklist!");
+        }
 
         activityService.logActivity(item.getCard(), user, "deleted checklist item", item.getTitle());
         checklistRepository.delete(item);

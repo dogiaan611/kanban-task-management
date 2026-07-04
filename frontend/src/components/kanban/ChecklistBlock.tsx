@@ -17,9 +17,12 @@ interface ChecklistBlockProps {
     cardId: number;
     members: BoardMember[];
     isViewer?: boolean;
+    isAdmin?: boolean;
+    isCreator?: boolean;
+    currentUserId?: number;
 }
 
-const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId, members = [], isViewer = false }) => {
+const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId, members = [], isViewer = false, isAdmin = false, isCreator = false, currentUserId }) => {
     const queryClient = useQueryClient();
     const [items, setItems] = useState<ChecklistItem[]>([]);
     const [newItemTitle, setNewItemTitle] = useState('');
@@ -139,13 +142,19 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId, members = [], i
                 {items.map(item => (
                     <div key={item.id} className="flex items-start group relative">
                         <div className="flex-shrink-0 pt-1">
-                            <input 
-                                type="checkbox"
-                                checked={item.isCompleted}
-                                onChange={() => handleToggleComplete(item)}
-                                disabled={isViewer}
-                                className={`w-4 h-4 rounded border-slate-300 focus:ring-blue-500 ${isViewer ? 'cursor-not-allowed opacity-60 text-slate-400' : 'text-blue-600 cursor-pointer'}`}
-                            />
+                            {(() => {
+                                const canCheck = isAdmin || isCreator || item.assigneeId === currentUserId;
+                                const disableCheck = isViewer || !canCheck;
+                                return (
+                                    <input 
+                                        type="checkbox"
+                                        checked={item.isCompleted}
+                                        onChange={() => handleToggleComplete(item)}
+                                        disabled={disableCheck}
+                                        className={`w-4 h-4 rounded border-slate-300 focus:ring-blue-500 ${disableCheck ? 'cursor-not-allowed opacity-60 text-slate-400' : 'text-blue-600 cursor-pointer'}`}
+                                    />
+                                );
+                            })()}
                         </div>
                         <div className="ml-3 flex-1 flex flex-col sm:flex-row sm:items-center">
                             <span className={`text-sm flex-1 ${item.isCompleted ? 'line-through text-slate-500' : 'text-slate-700'}`}>
@@ -154,28 +163,34 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId, members = [], i
                             
                             {/* Assignee Selection */}
                             <div className="flex items-center space-x-2 mt-2 sm:mt-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button 
-                                    onClick={() => !isViewer && setAssignPopoverId(assignPopoverId === item.id ? null : item.id)}
-                                    disabled={isViewer}
-                                    className={`flex items-center justify-center rounded-full p-1 transition-colors ${!isViewer ? 'hover:bg-slate-200 cursor-pointer' : 'cursor-not-allowed'}`}
-                                    title={item.assigneeName ? `Assigned to ${item.assigneeName}` : 'Assign member'}
-                                >
-                                    {item.assigneeId ? (
-                                        item.assigneeAvatarUrl ? (
-                                            <img src={item.assigneeAvatarUrl} alt={item.assigneeName} className="w-5 h-5 rounded-full object-cover shadow-sm border border-slate-200" />
-                                        ) : (
-                                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold shadow-sm border border-slate-200 ${getAvatarColor(item.assigneeName || 'A')}`}>
-                                                {getInitials(item.assigneeName || 'A')}
-                                            </div>
-                                        )
-                                    ) : (
-                                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-300 border-dashed hover:bg-slate-200 hover:text-slate-700 hover:border-slate-400">
-                                            <UserPlus className="w-3 h-3" />
-                                        </div>
-                                    )}
-                                </button>
+                                {(() => {
+                                    const canManageAssignee = isAdmin || isCreator;
+                                    const disableAssign = isViewer || !canManageAssignee;
+                                    return (
+                                        <button 
+                                            onClick={() => !disableAssign && setAssignPopoverId(assignPopoverId === item.id ? null : item.id)}
+                                            disabled={disableAssign}
+                                            className={`flex items-center justify-center rounded-full p-1 transition-colors ${!disableAssign ? 'hover:bg-slate-200 cursor-pointer' : 'cursor-not-allowed'}`}
+                                            title={item.assigneeName ? `Assigned to ${item.assigneeName}` : 'Assign member'}
+                                        >
+                                            {item.assigneeId ? (
+                                                item.assigneeAvatarUrl ? (
+                                                    <img src={item.assigneeAvatarUrl} alt={item.assigneeName} className="w-5 h-5 rounded-full object-cover shadow-sm border border-slate-200" />
+                                                ) : (
+                                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold shadow-sm border border-slate-200 ${getAvatarColor(item.assigneeName || 'A')}`}>
+                                                        {getInitials(item.assigneeName || 'A')}
+                                                    </div>
+                                                )
+                                            ) : (
+                                                <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-300 border-dashed hover:bg-slate-200 hover:text-slate-700 hover:border-slate-400">
+                                                    <UserPlus className="w-3 h-3" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    );
+                                })()}
 
-                                {!isViewer && (
+                                {(!isViewer && (isAdmin || isCreator)) && (
                                     <button 
                                         onClick={() => handleDeleteItem(item.id)}
                                         className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-slate-100 transition-colors"
@@ -230,7 +245,7 @@ const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ cardId, members = [], i
             </div>
 
             {/* Add Item Form */}
-            {!isViewer && (
+            {(!isViewer && (isAdmin || isCreator)) && (
                 <form onSubmit={handleAddItem} className="mt-2">
                     <div className="flex items-center space-x-2">
                         <input 

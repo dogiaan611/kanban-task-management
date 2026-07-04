@@ -12,6 +12,9 @@ interface CardTimelineProps {
     cardId: number;
     members: BoardMember[];
     isViewer?: boolean;
+    isAdmin?: boolean;
+    isCreator?: boolean;
+    currentUserId?: number;
 }
 
 const timeAgo = (dateString: string) => {
@@ -28,7 +31,7 @@ const timeAgo = (dateString: string) => {
     return `${days} days ago`;
 };
 
-const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members, isViewer = false }) => {
+const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members, isViewer = false, isAdmin = false, isCreator = false, currentUserId }) => {
     const queryClient = useQueryClient();
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const [newComment, setNewComment] = useState('');
@@ -359,7 +362,14 @@ const CardTimeline: React.FC<CardTimelineProps> = ({ cardId, members, isViewer =
             {/* Checklist Tab */}
             {activeTab === 'checklist' && (
                 <div className="bg-slate-100/30 p-4 rounded-xl border border-slate-200">
-                    <ChecklistBlock cardId={cardId} members={members} isViewer={isViewer} />
+                    <ChecklistBlock 
+                        cardId={cardId} 
+                        members={members} 
+                        isViewer={isViewer} 
+                        isAdmin={isAdmin} 
+                        isCreator={isCreator} 
+                        currentUserId={currentUserId} 
+                    />
                 </div>
             )}
 

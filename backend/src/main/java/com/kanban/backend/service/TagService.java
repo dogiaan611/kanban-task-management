@@ -80,6 +80,17 @@ public class TagService {
         User user = getUser(userEmail);
         permissionService.checkBoardMemberOrAdmin(card.getList().getBoard(), user);
 
+        boolean isAdmin = false;
+        try {
+            permissionService.checkBoardAdmin(card.getList().getBoard(), user);
+            isAdmin = true;
+        } catch (Exception e) {}
+        boolean isCreator = card.getCreatedBy() != null && card.getCreatedBy().getId().equals(user.getId());
+
+        if (!isAdmin && !isCreator) {
+            throw new RuntimeException("Bạn không có quyền thêm nhãn vào thẻ này!");
+        }
+
         Tag tag = tagRepository.findById(tagId)
                 .orElseThrow(() -> new RuntimeException("Tag not found"));
 
@@ -98,6 +109,17 @@ public class TagService {
                 .orElseThrow(() -> new RuntimeException("Card not found"));
         User user = getUser(userEmail);
         permissionService.checkBoardMemberOrAdmin(card.getList().getBoard(), user);
+
+        boolean isAdmin = false;
+        try {
+            permissionService.checkBoardAdmin(card.getList().getBoard(), user);
+            isAdmin = true;
+        } catch (Exception e) {}
+        boolean isCreator = card.getCreatedBy() != null && card.getCreatedBy().getId().equals(user.getId());
+
+        if (!isAdmin && !isCreator) {
+            throw new RuntimeException("Bạn không có quyền gỡ nhãn khỏi thẻ này!");
+        }
 
         Tag tag = tagRepository.findById(tagId)
                 .orElseThrow(() -> new RuntimeException("Tag not found"));

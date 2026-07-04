@@ -14,6 +14,7 @@ interface TagsBlockProps {
     cardId: number;
     cardTags?: Tag[];
     isViewer?: boolean;
+    isAdmin?: boolean;
 }
 
 const TAG_COLORS = [
@@ -27,7 +28,7 @@ const TAG_COLORS = [
     { name: 'Gray', hex: 'bg-slate-500 hover:bg-slate-600' }
 ];
 
-const TagsBlock: React.FC<TagsBlockProps> = ({ cardId, cardTags = [], isViewer = false }) => {
+const TagsBlock: React.FC<TagsBlockProps> = ({ cardId, cardTags = [], isViewer = false, isAdmin = false }) => {
     const { id } = useParams<{ id: string }>();
     const boardId = Number(id);
     const queryClient = useQueryClient();
@@ -150,18 +151,20 @@ const TagsBlock: React.FC<TagsBlockProps> = ({ cardId, cardTags = [], isViewer =
                                             <span>{tag.name}</span>
                                             <div className="flex items-center space-x-1">
                                                 {isSelected && <Check className="w-4 h-4 text-white" />}
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (window.confirm('Are you sure you want to delete this label?')) {
-                                                            deleteTagMutation.mutate(tag.id);
-                                                        }
-                                                    }}
-                                                    className="p-1 hover:bg-black/20 rounded transition-all opacity-80 hover:opacity-100"
-                                                    title="Delete label"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5 text-white" />
-                                                </button>
+                                                {isAdmin && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (window.confirm('Are you sure you want to delete this label?')) {
+                                                                deleteTagMutation.mutate(tag.id);
+                                                            }
+                                                        }}
+                                                        className="p-1 hover:bg-black/20 rounded transition-all opacity-80 hover:opacity-100"
+                                                        title="Delete label"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5 text-white" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     )

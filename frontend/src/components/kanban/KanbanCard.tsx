@@ -12,15 +12,22 @@ interface KanbanCardProps {
         assigneeId?: number;
         assigneeName?: string;
         assigneeAvatarUrl?: string;
+        createdById?: number;
     };
     listTitle: string;
     index: number;
     onDelete: (id: number) => void;
     isDragDisabled?: boolean;
+    isAdmin?: boolean;
 }
 
-const KanbanCard: React.FC<KanbanCardProps> = ({ card, listTitle, index, onDelete, isDragDisabled = false }) => {
+const KanbanCard: React.FC<KanbanCardProps> = ({ card, listTitle, index, onDelete, isDragDisabled = false, isAdmin = false }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const isCreator = card.createdById === currentUser.id;
+    const canDelete = isAdmin || isCreator;
+    const isViewer = isDragDisabled;
 
     return (
         <>
@@ -63,12 +70,14 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ card, listTitle, index, onDelet
                                             )}
                                         </div>
                                     )}
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); onDelete(card.id); }}
-                                        className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1.5 rounded-lg transition-colors"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                                    {canDelete && !isViewer && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); onDelete(card.id); }}
+                                            className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1.5 rounded-lg transition-colors"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -81,6 +90,7 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ card, listTitle, index, onDelet
                     card={{...card, listId: 0}} // Placeholder for listId if not in card object
                     listTitle={listTitle}
                     onClose={() => setIsModalOpen(false)}
+                    isViewer={isViewer}
                 />
             )}
         </>

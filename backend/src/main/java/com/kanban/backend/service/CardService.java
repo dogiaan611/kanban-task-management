@@ -123,7 +123,19 @@ public class CardService {
         User user = userRepository.findByEmail(userEmail).orElseThrow();
         permissionService.checkBoardMemberOrAdmin(card.getList().getBoard(), user);
 
+        boolean isAdmin = false;
+        try {
+            permissionService.checkBoardAdmin(card.getList().getBoard(), user);
+            isAdmin = true;
+        } catch (RuntimeException e) {
+            // Không phải admin
+        }
 
+        boolean isCreator = card.getCreatedBy() != null && card.getCreatedBy().getId().equals(user.getId());
+
+        if (!isAdmin && !isCreator) {
+            throw new RuntimeException("Bạn không có quyền chỉnh sửa thẻ này!");
+        }
 
         if (request.getTitle() != null && !request.getTitle().trim().isEmpty()) {
             card.setTitle(request.getTitle().trim());
@@ -163,8 +175,8 @@ public class CardService {
                 card.getAssignee() != null ? card.getAssignee().getId() : null,
                 card.getAssignee() != null ? card.getAssignee().getFullName() : null,
                 card.getAssignee() != null ? card.getAssignee().getAvatarUrl() : null,
-                card.getCreatedBy().getId(),
-                card.getCreatedBy().getFullName(),
+                card.getCreatedBy() != null ? card.getCreatedBy().getId() : null,
+                card.getCreatedBy() != null ? card.getCreatedBy().getFullName() : "Unknown",
                 card.getTags() != null ? card.getTags().stream().map(t -> new TagResponse(t.getId(), t.getName(), t.getColor())).collect(Collectors.toList()) : new java.util.ArrayList<>()
         );
     }
@@ -185,7 +197,9 @@ public class CardService {
             // Không phải admin
         }
 
-        if (!isAdmin && !card.getCreatedBy().getId().equals(user.getId())) {
+        boolean isCreator = card.getCreatedBy() != null && card.getCreatedBy().getId().equals(user.getId());
+
+        if (!isAdmin && !isCreator) {
             throw new RuntimeException("Bạn không có quyền xóa thẻ của người khác!");
         }
 

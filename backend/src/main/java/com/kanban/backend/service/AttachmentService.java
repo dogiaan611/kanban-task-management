@@ -45,6 +45,17 @@ public class AttachmentService {
 
         permissionService.checkBoardMemberOrAdmin(card.getList().getBoard(), user);
 
+        boolean isAdmin = false;
+        try {
+            permissionService.checkBoardAdmin(card.getList().getBoard(), user);
+            isAdmin = true;
+        } catch (Exception e) {}
+        boolean isCreator = card.getCreatedBy() != null && card.getCreatedBy().getId().equals(user.getId());
+
+        if (!isAdmin && !isCreator) {
+            throw new RuntimeException("Bạn không có quyền thêm tệp đính kèm vào thẻ này!");
+        }
+
         String originalFileName = file.getOriginalFilename();
         String storedFileName = fileStorageService.storeFile(file);
         String contentType = file.getContentType();
@@ -83,7 +94,6 @@ public class AttachmentService {
         User user = userRepository.findByEmail(userEmail).orElseThrow();
         permissionService.checkBoardMemberOrAdmin(attachment.getCard().getList().getBoard(), user);
 
-        // Chỉ có Admin hoặc chính người tải tệp lên mới được xóa
         boolean isAdmin = false;
         try {
             permissionService.checkBoardAdmin(attachment.getCard().getList().getBoard(), user);
@@ -92,8 +102,11 @@ public class AttachmentService {
             // Không phải admin
         }
 
-        if (!isAdmin && !attachment.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Bạn không có quyền xóa tệp đính kèm của người khác!");
+        boolean isCreator = attachment.getCard().getCreatedBy() != null && attachment.getCard().getCreatedBy().getId().equals(user.getId());
+        boolean isUploader = attachment.getUser().getId().equals(user.getId());
+
+        if (!isAdmin && !isCreator && !isUploader) {
+            throw new RuntimeException("Bạn không có quyền xóa tệp đính kèm này!");
         }
 
         fileStorageService.deleteFile(attachment.getFilePath());
