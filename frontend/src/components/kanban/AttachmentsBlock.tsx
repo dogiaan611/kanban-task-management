@@ -5,9 +5,11 @@ import { getAttachments, uploadAttachment, deleteAttachment, type Attachment } f
 interface AttachmentsBlockProps {
     cardId: number;
     isViewer?: boolean;
+    isAdmin?: boolean;
+    currentUserId?: number;
 }
 
-const AttachmentsBlock: React.FC<AttachmentsBlockProps> = ({ cardId, isViewer = false }) => {
+const AttachmentsBlock: React.FC<AttachmentsBlockProps> = ({ cardId, isViewer = false, isAdmin = false, currentUserId }) => {
     const queryClient = useQueryClient();
     const [isUploading, setIsUploading] = useState(false);
 
@@ -110,7 +112,7 @@ const AttachmentsBlock: React.FC<AttachmentsBlockProps> = ({ cardId, isViewer = 
                                         <Download className="w-3.5 h-3.5" />
                                         <span>Download</span>
                                     </button>
-                                    {!isViewer && (
+                                    {!isViewer && (isAdmin || attachment.userId === currentUserId) && (
                                         <button 
                                             onClick={() => deleteMutation.mutate(attachment.id)}
                                             className="text-xs font-medium text-slate-600 hover:text-rose-600 flex items-center space-x-1 underline decoration-transparent hover:decoration-rose-600 transition-all"

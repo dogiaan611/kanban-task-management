@@ -55,6 +55,7 @@ public class CardService {
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .position(maxPosition + 65536.0)
+                .createdBy(user)
                 .build();
 
         newCard = cardRepository.save(newCard);
@@ -74,6 +75,8 @@ public class CardService {
                 newCard.getAssignee() != null ? newCard.getAssignee().getId() : null,
                 newCard.getAssignee() != null ? newCard.getAssignee().getFullName() : null,
                 newCard.getAssignee() != null ? newCard.getAssignee().getAvatarUrl() : null,
+                newCard.getCreatedBy().getId(),
+                newCard.getCreatedBy().getFullName(),
                 newCard.getTags() != null ? newCard.getTags().stream().map(t -> new TagResponse(t.getId(), t.getName(), t.getColor())).collect(Collectors.toList()) : new java.util.ArrayList<>()
         );
     }
@@ -160,6 +163,8 @@ public class CardService {
                 card.getAssignee() != null ? card.getAssignee().getId() : null,
                 card.getAssignee() != null ? card.getAssignee().getFullName() : null,
                 card.getAssignee() != null ? card.getAssignee().getAvatarUrl() : null,
+                card.getCreatedBy().getId(),
+                card.getCreatedBy().getFullName(),
                 card.getTags() != null ? card.getTags().stream().map(t -> new TagResponse(t.getId(), t.getName(), t.getColor())).collect(Collectors.toList()) : new java.util.ArrayList<>()
         );
     }
@@ -170,7 +175,20 @@ public class CardService {
                 .orElseThrow(() -> new RuntimeException("Card not found"));
 
         User user = getUser(userEmail);
-        permissionService.checkBoardAdmin(card.getList().getBoard(), user);
+        permissionService.checkBoardMemberOrAdmin(card.getList().getBoard(), user);
+        
+        boolean isAdmin = false;
+        try {
+            permissionService.checkBoardAdmin(card.getList().getBoard(), user);
+            isAdmin = true;
+        } catch (RuntimeException e) {
+            // Không phải admin
+        }
+
+        if (!isAdmin && !card.getCreatedBy().getId().equals(user.getId())) {
+            throw new RuntimeException("Bạn không có quyền xóa thẻ của người khác!");
+        }
+
         Long boardId = card.getList().getBoard().getId();
 
         cardRepository.delete(card);

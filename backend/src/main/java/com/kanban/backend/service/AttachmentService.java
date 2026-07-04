@@ -83,6 +83,19 @@ public class AttachmentService {
         User user = userRepository.findByEmail(userEmail).orElseThrow();
         permissionService.checkBoardMemberOrAdmin(attachment.getCard().getList().getBoard(), user);
 
+        // Chỉ có Admin hoặc chính người tải tệp lên mới được xóa
+        boolean isAdmin = false;
+        try {
+            permissionService.checkBoardAdmin(attachment.getCard().getList().getBoard(), user);
+            isAdmin = true;
+        } catch (RuntimeException e) {
+            // Không phải admin
+        }
+
+        if (!isAdmin && !attachment.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Bạn không có quyền xóa tệp đính kèm của người khác!");
+        }
+
         fileStorageService.deleteFile(attachment.getFilePath());
         
         Card card = attachment.getCard();

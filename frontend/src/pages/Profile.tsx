@@ -125,15 +125,19 @@ const Profile = () => {
 
                             <form onSubmit={handleUpdateProfile} className="space-y-6">
                                 <div className="flex items-center space-x-6">
-                                    <div className="relative group">
+                                    <div 
+                                        className="relative group cursor-pointer"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        title="Click to change avatar"
+                                    >
                                         {avatarUrl ? (
-                                            <img src={avatarUrl} alt="Avatar" className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md group-hover:opacity-80 transition-opacity" />
+                                            <img src={avatarUrl} alt="Avatar" className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md group-hover:opacity-85 transition-opacity" />
                                         ) : (
                                             <div className="w-24 h-24 rounded-full bg-emerald-100 flex items-center justify-center border-4 border-white shadow-md text-3xl font-bold text-emerald-700">
                                                 {fullName.charAt(0).toUpperCase()}
                                             </div>
                                         )}
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Camera className="w-8 h-8 text-white drop-shadow-md" />
                                         </div>
                                     </div>

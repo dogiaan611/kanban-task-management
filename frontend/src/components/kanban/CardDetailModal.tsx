@@ -241,7 +241,19 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, listTitle, onCl
                             </div>
                         </div>
 
-                        <AttachmentsBlock cardId={card.id} isViewer={isViewer} />
+                        {(() => {
+                            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                            const currentMember = members.find(m => m.userId === currentUser.id);
+                            const isAdmin = currentMember?.role === 'ADMIN' || currentMember?.role === 'ROLE_ADMIN';
+                            return (
+                                <AttachmentsBlock 
+                                    cardId={card.id} 
+                                    isViewer={isViewer} 
+                                    isAdmin={isAdmin} 
+                                    currentUserId={currentUser.id} 
+                                />
+                            );
+                        })()}
 
                         <div>
                             <div className="flex items-center space-x-3 mb-4">

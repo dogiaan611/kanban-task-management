@@ -140,19 +140,17 @@ const BoardMembersBar: React.FC<BoardMembersBarProps> = ({ boardId }) => {
             </div>
 
 
-            {/* Invite Button - Only show if Admin or Member (not Viewer) */}
-            {currentMemberRole !== 'VIEWER' && (
-                <button
-                    onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-                    className="flex items-center space-x-1.5 bg-white hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-emerald-300 transition-all text-sm font-medium shadow-sm"
-                >
-                    <UserPlus className="w-4 h-4" />
-                    <span>Share</span>
-                </button>
-            )}
+            {/* Invite/Members Button - Visible to all roles */}
+            <button
+                onClick={() => setIsPopoverOpen(!isPopoverOpen)}
+                className="flex items-center space-x-1.5 bg-white hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-emerald-300 transition-all text-sm font-medium shadow-sm"
+            >
+                <UserPlus className="w-4 h-4" />
+                <span>{isAdmin ? 'Share' : 'Members'}</span>
+            </button>
 
-            {/* Invite Popover */}
-            {isPopoverOpen && currentMemberRole !== 'VIEWER' && (
+            {/* Invite/Members Popover */}
+            {isPopoverOpen && (
                 <div className="absolute top-full right-0 mt-2 w-[22rem] bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 animate-in fade-in zoom-in-95 duration-150">
                     {/* Popover Header */}
                     <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
@@ -228,56 +226,58 @@ const BoardMembersBar: React.FC<BoardMembersBarProps> = ({ boardId }) => {
                         )}
                     </div>
 
-                    {/* Invite Form */}
-                    <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
-                        <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Invite by email</p>
-                        <p className="text-xs text-slate-400 mb-3 block">Only invite users with a registered Kanban account.</p>
-                        <form onSubmit={handleInvite} className="flex space-x-2 mt-4">
-                            <input
-                                type="email"
-                                value={inviteEmail}
-                                onChange={(e) => { setInviteEmail(e.target.value); setErrorMsg(''); setSuccessMsg(''); }}
-                                placeholder="name@example.com"
-                                className="flex-1 px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                                autoFocus
-                            />
-                            <button
-                                type="submit"
-                                disabled={inviteMutation.isPending}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 whitespace-nowrap"
-                            >
-                                {inviteMutation.isPending ? '...' : 'Invite'}
-                            </button>
-                        </form>
-                        {errorMsg && (
-                            <p className="text-rose-500 text-xs mt-2">{errorMsg}</p>
-                        )}
-                        {successMsg && (
-                            <div className="mt-2 space-y-2">
-                                <p className="text-emerald-600 text-xs font-medium">✓ {successMsg}</p>
-                                {inviteLink && (
-                                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2">
-                                        <p className="text-xs text-slate-500 mb-1">Link chấp nhận lời mời:</p>
-                                        <a
-                                            href={inviteLink}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="text-xs text-emerald-700 break-all hover:underline"
-                                        >
-                                            {inviteLink}
-                                        </a>
-                                        <button
-                                            type="button"
-                                            onClick={() => navigator.clipboard.writeText(inviteLink)}
-                                            className="mt-1 text-xs text-emerald-600 hover:text-emerald-800 font-semibold"
-                                        >
-                                            Copy link
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                    {/* Invite Form - Only visible to admin/owner */}
+                    {isAdmin && (
+                        <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
+                            <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Invite by email</p>
+                            <p className="text-xs text-slate-400 mb-3 block">Only invite users with a registered Kanban account.</p>
+                            <form onSubmit={handleInvite} className="flex space-x-2 mt-4">
+                                <input
+                                    type="email"
+                                    value={inviteEmail}
+                                    onChange={(e) => { setInviteEmail(e.target.value); setErrorMsg(''); setSuccessMsg(''); }}
+                                    placeholder="name@example.com"
+                                    className="flex-1 px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                                    autoFocus
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={inviteMutation.isPending}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 whitespace-nowrap"
+                                >
+                                    {inviteMutation.isPending ? '...' : 'Invite'}
+                                </button>
+                            </form>
+                            {errorMsg && (
+                                <p className="text-rose-500 text-xs mt-2">{errorMsg}</p>
+                            )}
+                            {successMsg && (
+                                <div className="mt-2 space-y-2">
+                                    <p className="text-emerald-600 text-xs font-medium">✓ {successMsg}</p>
+                                    {inviteLink && (
+                                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2">
+                                            <p className="text-xs text-slate-500 mb-1">Link chấp nhận lời mời:</p>
+                                            <a
+                                                href={inviteLink}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-xs text-emerald-700 break-all hover:underline"
+                                            >
+                                                {inviteLink}
+                                            </a>
+                                            <button
+                                                type="button"
+                                                onClick={() => navigator.clipboard.writeText(inviteLink)}
+                                                className="mt-1 text-xs text-emerald-600 hover:text-emerald-800 font-semibold"
+                                            >
+                                                Copy link
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

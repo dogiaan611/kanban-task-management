@@ -93,6 +93,8 @@ public class KanbanListService {
                     card.getAssignee() != null ? card.getAssignee().getId() : null,
                     card.getAssignee() != null ? card.getAssignee().getFullName() : null,
                     card.getAssignee() != null ? card.getAssignee().getAvatarUrl() : null,
+                    card.getCreatedBy().getId(),
+                    card.getCreatedBy().getFullName(),
                     card.getTags() != null ? card.getTags().stream().map(t -> new TagResponse(t.getId(), t.getName(), t.getColor())).collect(Collectors.toList()) : new java.util.ArrayList<>()
             )).collect(Collectors.toList());
 

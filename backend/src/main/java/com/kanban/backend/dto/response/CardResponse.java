@@ -21,5 +21,7 @@ public class CardResponse {
     private Long assigneeId;
     private String assigneeName;
     private String assigneeAvatarUrl;
+    private Long createdById;
+    private String createdByFullName;
     private List<TagResponse> tags;
 }

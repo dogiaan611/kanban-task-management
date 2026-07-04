@@ -290,18 +290,24 @@ const BoardDetail = () => {
                                         ref={provided.innerRef}
                                         {...provided.droppableProps}
                                     >
-                                        {filteredLists?.map((list: any, index: number) => (
-                                            <KanbanList
-                                                key={list.id}
-                                                list={list}
-                                                index={index}
-                                                isViewer={isViewer}
-                                                isDragDisabled={isViewer}
-                                                onDeleteList={(id) => deleteListMutation.mutate(id)}
-                                                onCreateCard={(listId, title) => createCardMutation.mutate({ listId, title })}
-                                                onDeleteCard={(id) => deleteCardMutation.mutate(id)}
-                                            />
-                                        ))}
+                                        {filteredLists?.map((list: any, index: number) => {
+                                            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                                            const currentMember = members.find((m: any) => m.userId === currentUser.id);
+                                            const isAdmin = currentMember?.role === 'ADMIN' || currentMember?.role === 'ROLE_ADMIN';
+                                            return (
+                                                <KanbanList
+                                                    key={list.id}
+                                                    list={list}
+                                                    index={index}
+                                                    isViewer={isViewer}
+                                                    isDragDisabled={isViewer}
+                                                    isAdmin={isAdmin}
+                                                    onDeleteList={(id) => deleteListMutation.mutate(id)}
+                                                    onCreateCard={(listId, title) => createCardMutation.mutate({ listId, title })}
+                                                    onDeleteCard={(id) => deleteCardMutation.mutate(id)}
+                                                />
+                                            );
+                                        })}
                                         {provided.placeholder}
 
                                         {/* Add New List Button */}
